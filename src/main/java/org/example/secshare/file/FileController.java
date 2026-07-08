@@ -56,9 +56,10 @@ public class FileController {
                 .body(resource);
     }
     @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<FileInfoResponse> listAllFiles() {
         return fileService.listAllFiles();
-}
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(

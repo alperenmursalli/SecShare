@@ -35,11 +35,12 @@ public class SecurityConfig {
                     .requestMatchers("/", "/index.html").permitAll()
                     .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
                     .requestMatchers("/error").permitAll()
-                    .requestMatchers("/files.html").hasRole("ADMIN")
+                    .requestMatchers("/files.html").permitAll()
                     .requestMatchers("/api/files/all").hasRole("ADMIN")
         
                     .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/test.html").permitAll()
+                    .requestMatchers("/test.html").permitAll()              
+                    
                     .anyRequest().authenticated()
                 )
 
