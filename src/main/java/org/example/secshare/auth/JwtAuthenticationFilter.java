@@ -1,7 +1,6 @@
 package org.example.secshare.auth;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,8 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            Jws<Claims> jws = jwtService.parseAndValidate(token);
-            Claims claims = jws.getPayload();
+            Claims claims = jwtService.parseAndValidate(token);
 
             String subject = claims.getSubject();
             if (subject == null) {
