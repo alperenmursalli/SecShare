@@ -139,6 +139,61 @@ public class FileService {
         return sharedFile;
     }
 
+    // =====================================================================
+    //  Asagidaki yardimcilar vuln.* modulleri tarafindan kullanilir.
+    //  bypassOwnership / allowTraversal parametreleri ilgili bayrak
+    //  KAPALI iken guvenli davranisi zorlar.
+    // =====================================================================
+
+    /** IDOR: bypassOwnership=true iken sahiplik kontrolu atlanir. */
+    public SharedFile getFileForDownload(UUID fileId, UserPrincipal principal, boolean bypassOwnership) {
+        if (bypassOwnership) {
+            return sharedFileRepository.findByIdAndDeletedFalse(fileId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dosya bulunamadı"));
+        }
+        return getOwnedFileOrThrow(fileId, principal);
+    }
+
+    /** DB kaydindaki storage dosyasini Resource'a cevirir. */
+    public Resource toResource(SharedFile sharedFile) {
+        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dosya bulunamadı");
+            }
+            return resource;
+        } catch (MalformedURLException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Dosya okunamadı");
+        }
+    }
+
+    /**
+     * Path traversal / LFI: allowTraversal=true iken kullanici girdisi
+     * normalize edilmeden resolve edilir; ".." veya mutlak yol ile depo
+     * disina cikilabilir.
+     */
+    public Resource readRawPath(String userPath, boolean allowTraversal) {
+        Path target;
+        if (allowTraversal) {
+            target = baseStoragePath.resolve(userPath); // normalize/kontrol YOK
+        } else {
+            target = baseStoragePath.resolve(userPath).normalize();
+            if (!target.startsWith(baseStoragePath)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçersiz yol");
+            }
+        }
+        try {
+            Resource resource = new UrlResource(target.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dosya bulunamadı");
+            }
+            return resource;
+        } catch (MalformedURLException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Dosya okunamadı");
+        }
+    }
+
     public void delete(UUID fileId, UserPrincipal principal) {
         SharedFile sharedFile = getOwnedFileOrThrow(fileId, principal);
         sharedFile.setDeleted(true);

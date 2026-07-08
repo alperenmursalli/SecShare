@@ -2,78 +2,120 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>SecureShare Admin</title>
+    <title>SecureShare Panel</title>
     <style>
-        body { font-family: Arial; margin: 40px; background:#f7f7f7; }
-        h2 { margin-bottom:20px; }
+        body { font-family: Arial; margin: 40px; background:#f7f7f7; color:#222; }
+        h2 { margin: 24px 0 12px; }
+        section { background:#fff; padding:16px 20px; margin-bottom:22px; border:1px solid #e2e2e2; border-radius:8px; }
         table { border-collapse: collapse; width: 100%; background:white; }
-        th, td { border: 1px solid #ddd; padding: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align:left; }
         th { background: #f0f0f0; }
         button { padding: 6px 12px; cursor: pointer; }
-        input { padding:8px; width:100%; margin-bottom:10px; }
+        input { padding:8px; width:100%; margin-bottom:10px; box-sizing:border-box; }
+        pre { background:#111; color:#0f0; padding:12px; border-radius:6px; overflow:auto; }
+        .row { display:flex; gap:10px; }
+        .row input { flex:1; }
     </style>
 </head>
 <body>
 
-<h2>Uploaded Files (Admin Panel)</h2>
+<h2>SecureShare Panel</h2>
 
-<label>JWT Token:</label>
-<input id="token" placeholder="Token buraya yapıştır">
+<section>
+    <label>JWT Token:</label>
+    <input id="token" placeholder="Token buraya yapıştır">
+    <div class="row">
+        <button onclick="saveToken()">Token Kaydet</button>
+        <button onclick="loadFiles('/api/files')">Dosyalarım</button>
+        <button onclick="loadFiles('/api/files/all')">Tümü (admin)</button>
+    </div>
+</section>
 
-<button onclick="loadFiles()">Dosyaları Getir</button>
+<section>
+    <h2>Dosya Ara</h2>
+    <div class="row">
+        <input id="q" placeholder="dosya adı...">
+        <button onclick="search()">Ara</button>
+    </div>
+    <ul id="searchResults"></ul>
+</section>
 
-<table>
-    <thead>
-    <tr>
-        <th>Filename</th>
-        <th>Size (KB)</th>
-        <th>Date</th>
-        <th>Download</th>
-        <th>Delete</th>
-    </tr>
-    </thead>
-    <tbody id="fileTable"></tbody>
-</table>
+<section>
+    <h2>URL'den İçe Aktar</h2>
+    <div class="row">
+        <input id="importUrl" placeholder="https://...">
+        <button onclick="importUrl()">İçe Aktar</button>
+    </div>
+    <pre id="importOut"></pre>
+</section>
+
+<section>
+    <h2>Dosyalar</h2>
+    <table>
+        <thead>
+        <tr><th>Filename</th><th>Size (KB)</th><th>Date</th><th>İşlem</th></tr>
+        </thead>
+        <tbody id="fileTable"></tbody>
+    </table>
+</section>
 
 <script>
-async function loadFiles() {
-    const token = document.getElementById("token").value;
+// NOT: token localStorage'da tutuluyor (stored XSS ile calinabilir - egitim amacli).
+window.addEventListener("load", () => {
+    const t = localStorage.getItem("token");
+    if (t) document.getElementById("token").value = t;
+});
 
-    const res = await fetch("/api/files/all", {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    });
+function saveToken() {
+    localStorage.setItem("token", document.getElementById("token").value);
+}
 
+function authHeader() {
+    return { "Authorization": "Bearer " + document.getElementById("token").value };
+}
+
+async function loadFiles(url) {
+    const res = await fetch(url, { headers: authHeader() });
     const files = await res.json();
     const table = document.getElementById("fileTable");
     table.innerHTML = "";
-
-    files.forEach(f => {
+    (Array.isArray(files) ? files : []).forEach(f => {
         const row = document.createElement("tr");
-
+        // XSS sink: dosya adi sanitize edilmeden innerHTML'e basiliyor
         row.innerHTML = `
-            <td>${f.originalFilename}</td>
+            <td>${f.name}</td>
             <td>${(f.sizeBytes/1024).toFixed(1)}</td>
             <td>${new Date(f.createdAt).toLocaleString()}</td>
-            <td><button onclick="downloadFile('${f.id}', '${token}')">Download</button></td>
-            <td><button onclick="deleteFile('${f.id}', '${token}')">Delete</button></td>
-        `;
-
+            <td>
+              <a href="/api/files/view/${f.id}" target="_blank">view</a> |
+              <button onclick="deleteFile('${f.id}')">Delete</button>
+            </td>`;
         table.appendChild(row);
     });
 }
 
-function downloadFile(id, token) {
-    window.open("/api/files/" + id + "?token=" + token);
+async function search() {
+    const q = document.getElementById("q").value;
+    const res = await fetch("/api/files/search?name=" + encodeURIComponent(q), { headers: authHeader() });
+    const rows = await res.json();
+    // XSS sink: sonuclar sanitize edilmeden basiliyor
+    document.getElementById("searchResults").innerHTML =
+        (Array.isArray(rows) ? rows : []).map(r => "<li>" + r + "</li>").join("");
 }
 
-async function deleteFile(id, token) {
-    await fetch("/api/files/" + id, {
-        method: "DELETE",
-        headers: { "Authorization": "Bearer " + token }
+async function importUrl() {
+    const url = document.getElementById("importUrl").value;
+    const res = await fetch("/api/files/import", {
+        method: "POST",
+        headers: Object.assign({ "Content-Type": "application/json" }, authHeader()),
+        body: JSON.stringify({ url })
     });
-    loadFiles();
+    document.getElementById("importOut").textContent = await res.text();
+}
+
+async function deleteFile(id) {
+    await fetch("/api/files/" + id, { method: "DELETE", headers: authHeader() });
+    loadFiles('/api/files');
 }
 </script>
 

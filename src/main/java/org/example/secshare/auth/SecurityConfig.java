@@ -39,10 +39,18 @@ public class SecurityConfig {
                     .requestMatchers("/api/files/all").hasRole("ADMIN")
         
                     .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/test.html").permitAll()              
-                    
+                    .requestMatchers("/test.html").permitAll()
+
+                    // recon: actuator endpoint'leri acik (env icinde secret sizar)
+                    .requestMatchers("/actuator/**").permitAll()
+                    // "public share link" - stored XSS teslim noktasi (tokensiz erisim)
+                    .requestMatchers("/api/files/view/**").permitAll()
+
                     .anyRequest().authenticated()
                 )
+
+                // h2-console frame icinde calisir + clickjacking kolayligi
+                .headers(h -> h.frameOptions(f -> f.disable()))
 
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
