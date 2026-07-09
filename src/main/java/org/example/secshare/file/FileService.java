@@ -38,7 +38,6 @@ public class FileService {
     public FileService(
             SharedFileRepository sharedFileRepository,
             UserRepository userRepository,
-            // Fly için default'u /tmp/uploads yaptık
             @Value("${app.storage.base-path:/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
@@ -54,11 +53,11 @@ public class FileService {
 
     public FileInfoResponse upload(MultipartFile file, UserPrincipal principal) {
         if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dosya boş olamaz");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File cannot be empty");
         }
 
         if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Dosya boyutu çok büyük (max 50MB)");
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "File is too large (max 50MB)");
         }
 
         String originalFilename = file.getOriginalFilename();
@@ -68,7 +67,7 @@ public class FileService {
 
         String extension = getExtension(originalFilename);
         if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bu dosya türüne izin verilmiyor");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This file type is not allowed");
         }
 
         UUID fileId = UUID.randomUUID();
@@ -76,13 +75,13 @@ public class FileService {
 
         Path targetPath = baseStoragePath.resolve(storageFilename).normalize();
         if (!targetPath.startsWith(baseStoragePath)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçersiz dosya adı");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
         }
 
         try {
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Dosya kaydedilemedi");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save file");
         }
 
         User owner = userRepository.findById(principal.userId())
@@ -120,20 +119,20 @@ public class FileService {
         try {
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dosya bulunamadı");
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
             }
             return resource;
         } catch (MalformedURLException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Dosya okunamadı");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read file");
         }
     }
 
     public SharedFile getOwnedFileOrThrow(UUID fileId, UserPrincipal principal) {
         SharedFile sharedFile = sharedFileRepository.findByIdAndDeletedFalse(fileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Dosya bulunamadı"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
 
         if (!sharedFile.getOwner().getId().equals(principal.userId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu dosyaya erişim yetkiniz yok");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this file");
         }
 
         return sharedFile;

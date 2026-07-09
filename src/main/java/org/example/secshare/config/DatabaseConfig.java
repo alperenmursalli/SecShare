@@ -33,8 +33,8 @@ public class DatabaseConfig {
                 String userInfo = dbUri.getUserInfo();
                 
                 if (userInfo == null || !userInfo.contains(":")) {
-                    log.error("DATABASE_URL formatı geçersiz: user:password eksik");
-                    throw new IllegalArgumentException("DATABASE_URL formatı geçersiz: user:password eksik");
+                    log.error("Invalid DATABASE_URL format: user:password missing");
+                    throw new IllegalArgumentException("Invalid DATABASE_URL format: user:password missing");
                 }
                 
                 String[] credentials = userInfo.split(":", 2);
@@ -44,7 +44,7 @@ public class DatabaseConfig {
                 int port = dbUri.getPort() == -1 ? 5432 : dbUri.getPort();
                 String dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ':' + port + dbUri.getPath();
                 
-                log.info("DATABASE_URL parse edildi: host={}, port={}, database={}", 
+                log.info("DATABASE_URL parsed: host={}, port={}, database={}",
                     dbUri.getHost(), port, dbUri.getPath());
                 
                 return DataSourceBuilder.create()
@@ -54,12 +54,12 @@ public class DatabaseConfig {
                         .driverClassName("org.postgresql.Driver")
                         .build();
             } catch (Exception e) {
-                log.error("DATABASE_URL parse edilemedi: {}", e.getMessage(), e);
-                throw new RuntimeException("DATABASE_URL parse edilemedi: " + e.getMessage(), e);
+                log.error("Failed to parse DATABASE_URL: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to parse DATABASE_URL: " + e.getMessage(), e);
             }
         }
         
-        log.info("DATABASE_URL bulunamadı, application.properties kullanılıyor");
+        log.info("DATABASE_URL not found, using application.properties");
         return DataSourceBuilder.create()
                 .url(dataSourceProperties.getUrl())
                 .username(dataSourceProperties.getUsername())

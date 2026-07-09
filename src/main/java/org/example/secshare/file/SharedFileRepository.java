@@ -11,7 +11,7 @@ public interface SharedFileRepository extends JpaRepository<SharedFile, UUID> {
 
     List<SharedFile> findByOwnerAndDeletedFalseOrderByCreatedAtDesc(User owner);
 
-    List<SharedFile> findByDeletedFalseOrderByCreatedAtDesc(); // <-- BUNU EKLEDİK
+    List<SharedFile> findByDeletedFalseOrderByCreatedAtDesc();
 
     Optional<SharedFile> findByIdAndDeletedFalse(UUID id);
 }
