@@ -70,7 +70,7 @@ on the server (**stateless**) — identity comes entirely from the token.
 
 ## 2. How to run it (with Docker)
 
-Prerequisite: Docker + docker-compose installed.
+Prerequisite: Docker + Docker Compose v2 installed.
 
 ```bash
 # 1) Prepare environment variables
@@ -79,10 +79,10 @@ cp .env.example .env
 # To generate a JWT secret:  openssl rand -base64 32
 
 # 2) Start the app + PostgreSQL together
-docker-compose up -d --build
+docker compose up -d --build
 
 # 3) Follow the logs
-docker-compose logs -f app
+docker compose logs -f app
 ```
 
 It's ready once you see the line "Started SecshareApplication".
@@ -94,10 +94,10 @@ Open in a browser:
 Management commands:
 
 ```bash
-docker-compose ps                # status
-docker-compose down              # stop (data is kept)
-docker-compose down -v           # stop + delete DB & files
-docker-compose up -d --build     # rebuild after code changes
+docker compose ps                # status
+docker compose down              # stop (data is kept)
+docker compose down -v           # stop + delete DB & files
+docker compose up -d --build     # rebuild after code changes
 ```
 
 ---
@@ -241,7 +241,7 @@ token for you and attaches it to requests.
 
 ## 6. Configuration (environment variables)
 
-Variables read from `.env` (by docker-compose) and supported by the application:
+Variables read from `.env` (by Docker Compose) and supported by the application:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -261,8 +261,8 @@ Variables read from `.env` (by docker-compose) and supported by the application:
 
 ## 7. Troubleshooting
 
-- **App won't start / DB error:** Check `docker-compose logs app` and
-  `docker-compose logs db`. Wait for the DB to become `Up (healthy)` — the app
+- **App won't start / DB error:** Check `docker compose logs app` and
+  `docker compose logs db`. Wait for the DB to become `Up (healthy)` — the app
   won't start until the DB is ready.
 - **404 at `/`:** Normal, there's no root route. Use `/test.html` or `/files.html`.
 - **Upload returns 400:** Is the extension in the allow-list? (`pdf, png, jpg, jpeg,
@@ -279,4 +279,4 @@ Variables read from `.env` (by docker-compose) and supported by the application:
 - **Security:** Spring Security, JWT (jjwt 0.12.5), BCrypt (strength 12)
 - **Data:** Spring Data JPA + PostgreSQL 16
 - **Storage:** Local file system (`/app/uploads`, persistent via Docker volume)
-- **Packaging:** Docker (multi-stage build) + docker-compose
+- **Packaging:** Docker (multi-stage build) + Docker Compose
