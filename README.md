@@ -1,154 +1,194 @@
 # SecureShare
 
-## https://secshare.fly.dev/
+A modern and secure file-sharing platform built with **Spring Boot**, **React**, and **PostgreSQL**. SecureShare allows users to upload, manage, and securely share files through an intuitive web interface while following modern security best practices.
 
-SecureShare is a secure file sharing backend service built with **Spring Boot**, **JWT authentication**, and **PostgreSQL**.
-The application focuses on providing a secure infrastructure for user authentication and protected resource access.
+🌐 **Live Demo:** https://sec-share.duckdns.org
+
+---
 
 ## Features
 
-* User registration and authentication
-* JWT based authentication system
-* Secure password hashing
-* Role based authorization
-* RESTful API design
-* PostgreSQL database integration
-* Deployable to cloud platforms (Render)
+- 🔐 Secure user authentication with JWT
+- 👤 User registration and login
+- 📁 File upload and download
+- 🔗 Secure shareable file links
+- 🛡️ Role-based authorization
+- 🔒 Password hashing with Spring Security
+- 📦 PostgreSQL database integration
+- 🐳 Docker & Docker Compose support
+- 🚀 Automated deployment with GitHub Actions
+- ☁️ Oracle Cloud deployment
+
+---
 
 ## Tech Stack
 
-* Java
-* Spring Boot
-* Spring Security
-* JWT (JSON Web Tokens)
-* PostgreSQL
-* Maven
+### Backend
 
-## Project Structure
+- Java
+- Spring Boot
+- Spring Security
+- JWT (JSON Web Token)
+- Maven
 
-```
-src
- ├── auth
- │    ├── AuthController
- │    ├── AuthService
- │
- ├── user
- │    ├── User
- │    ├── UserRepository
- │
- ├── security
- │    ├── JwtService
- │    ├── JwtFilter
- │
- └── config
-      ├── SecurityConfig
-```
+### Frontend
 
-## Authentication Flow
+- React
+- TypeScript
+- Vite
 
-1. User registers with email and password
-2. Password is hashed using `PasswordEncoder`
-3. User logs in with credentials
-4. Server generates a **JWT token**
-5. Client sends token in requests
+### Database
+
+- PostgreSQL
+
+### DevOps
+
+- Docker
+- Docker Compose
+- Nginx
+- GitHub Actions
+- Oracle Cloud Infrastructure
+- DuckDNS
+
+---
+
+## Architecture
 
 ```
+                 Browser
+                     │
+                     ▼
+                 Nginx Reverse Proxy
+                  ┌───────────────┐
+                  ▼               ▼
+            React Frontend   Spring Boot API
+                                      │
+                                      ▼
+                                PostgreSQL
+```
+
+---
+
+## Live Demo
+
+Visit the application:
+
+**https://sec-share.duckdns.org**
+
+---
+
+## Getting Started
+
+### Clone the repository
+
+```bash
+git clone https://github.com/alperenmursalli/Secure-Share.git
+cd Secure-Share
+```
+
+### Configure environment variables
+
+Create a `.env` file and configure the required environment variables.
+
+Example:
+
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/secureshare
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=your_password
+
+JWT_SECRET=your_base64_secret
+```
+
+### Run with Docker
+
+```bash
+docker-compose up -d --build
+```
+
+View running containers:
+
+```bash
+docker-compose ps
+```
+
+View logs:
+
+```bash
+docker-compose logs -f
+```
+
+Stop the application:
+
+```bash
+docker-compose down
+```
+
+---
+
+## Authentication
+
+SecureShare uses JWT authentication for protecting API endpoints.
+
+Example:
+
+```http
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-6. `JwtFilter` validates the token
-7. If valid, the user is authenticated in the security context
+Passwords are securely hashed before storage using Spring Security.
 
-## API Endpoints
-
-### Authentication
-
-```
-POST /auth/register
-POST /auth/login
-```
-
-### Example Request
-
-```
-POST /auth/login
-```
-
-Body:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-Response:
-
-```json
-{
-  "token": "JWT_TOKEN"
-}
-```
-
-## Environment Variables
-
-Example configuration:
-
-```
-SPRING_DATASOURCE_URL=jdbc:postgresql://HOST:PORT/DATABASE
-SPRING_DATASOURCE_USERNAME=USERNAME
-SPRING_DATASOURCE_PASSWORD=PASSWORD
-
-JWT_SECRET=your_base64_secret_key
-```
-
-## Running the Project
-
-Clone the repository:
-
-```
-git clone https://github.com/yourusername/secureshare.git
-```
-
-Navigate to the project:
-
-```
-cd secureshare
-```
-
-Run the project:
-
-```
-./mvnw spring-boot:run
-```
+---
 
 ## Deployment
 
-The project can be deployed using **Render** with a PostgreSQL database service.
+Deployment is fully automated through **GitHub Actions**.
 
-Steps:
+Each push to the `main` branch triggers:
 
-1. Create PostgreSQL service
-2. Copy the internal database URL
-3. Configure environment variables
-4. Deploy the Spring Boot application
+1. GitHub Actions workflow
+2. Secure SSH connection to the Oracle Cloud VM
+3. Pulling the latest source code
+4. Docker image rebuild
+5. Automatic container restart
 
-## Security Notes
+---
 
-* Passwords are stored using hashing.
-* JWT tokens are signed using a secret key.
-* All protected routes require authentication.
+## Security
 
-## Future Improvements
+SecureShare follows common security best practices, including:
 
-* File upload system
-* Encrypted file storage
-* File sharing with expiring links
-* Access logging
-* User roles and permissions
+- JWT Authentication
+- Password Hashing
+- Role-Based Access Control (RBAC)
+- Protected REST API Endpoints
+- Environment-based Secret Management
+- Reverse Proxy Configuration
+- Containerized Deployment
+- Input Validation
+
+---
+
+## Roadmap
+
+- Email verification
+- Password reset
+- File versioning
+- Expiring download links
+- File encryption at rest
+- Activity logs
+- Storage quota management
+- Multi-file sharing
+- Virus scanning integration
+
+---
+
+## Project Status
+
+🚧 This project is actively under development, and new features and improvements are continuously being added.
+
+---
 
 ## License
 
-This project is for educational purposes.
-
+This project is available for educational and portfolio purposes.
