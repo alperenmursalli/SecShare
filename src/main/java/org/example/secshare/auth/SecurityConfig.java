@@ -32,7 +32,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/health", "/healthz").permitAll()
                     .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                    .requestMatchers("/", "/index.html").permitAll()
+                    .requestMatchers("/api/info").permitAll()
+                    .requestMatchers("/", "/index.html", "/guide.html").permitAll()
                     .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/files.html").permitAll()

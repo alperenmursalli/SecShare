@@ -1,419 +1,294 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecShare — Güvenli Dosya Paylaşımı</title>
+    <title>SecShare — Secure File Sharing</title>
     <style>
         :root {
-            --brand: #6366f1;
-            --brand-strong: #4f46e5;
-            --brand-soft: rgba(99, 102, 241, 0.12);
-            --bg: #f4f5fb;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-soft: #eef2ff;
+            --bg: #f7f8fa;
             --surface: #ffffff;
-            --surface-2: #f8f9fc;
-            --border: #e5e7eb;
-            --text: #111827;
-            --text-muted: #6b7280;
-            --success: #16a34a;
-            --success-soft: #dcfce7;
-            --danger: #dc2626;
-            --danger-soft: #fee2e2;
-            --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.05);
-            --radius: 14px;
+            --surface-2: #f4f6f8;
+            --border: #e2e5ea;
+            --border-strong: #cfd4dc;
+            --text: #1a1d23;
+            --text-muted: #5b6472;
+            --text-faint: #8a93a2;
+            --success: #0f7d3d;
+            --success-bg: #e7f5ec;
+            --danger: #b42318;
+            --danger-bg: #fdeceb;
+            --radius: 8px;
+            --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
         }
-
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0b0d14;
-                --surface: #14171f;
-                --surface-2: #1b1f29;
-                --border: #262b36;
-                --text: #f3f4f6;
-                --text-muted: #9aa2b1;
-                --brand-soft: rgba(99, 102, 241, 0.2);
-                --success-soft: rgba(22, 163, 74, 0.15);
-                --danger-soft: rgba(220, 38, 38, 0.15);
-                --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+                --accent: #6690ff;
+                --accent-hover: #7c9dff;
+                --accent-soft: #1a2135;
+                --bg: #0e1015;
+                --surface: #161922;
+                --surface-2: #1c2029;
+                --border: #272c37;
+                --border-strong: #333a47;
+                --text: #e7eaf0;
+                --text-muted: #9aa3b2;
+                --text-faint: #6b7484;
+                --success: #4ade80;
+                --success-bg: #12271a;
+                --danger: #f87171;
+                --danger-bg: #2a1616;
+                --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.25);
             }
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
-            line-height: 1.55;
-            min-height: 100vh;
+            font-size: 15px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
         }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
 
-        a { color: var(--brand); text-decoration: none; }
-
-        /* ---------- Top bar ---------- */
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 24px;
-            background: color-mix(in srgb, var(--surface) 88%, transparent);
-            backdrop-filter: blur(10px);
+        /* Header */
+        .header {
+            background: var(--surface);
             border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 20;
         }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 18px;
-            letter-spacing: -0.02em;
+        .header-inner {
+            max-width: 1080px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 60px;
         }
-        .brand-mark {
-            width: 32px; height: 32px;
-            border-radius: 9px;
-            display: grid; place-items: center;
-            background: linear-gradient(135deg, var(--brand), #a855f7);
-            color: #fff;
-            box-shadow: 0 4px 12px var(--brand-soft);
-        }
-        .nav-user {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
-        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; letter-spacing: -0.01em; }
+        .brand svg { color: var(--accent); }
+        .header-nav { display: flex; align-items: center; gap: 20px; font-size: 14px; }
+        .header-nav a.navlink { color: var(--text-muted); font-weight: 500; }
+        .header-nav a.navlink:hover { color: var(--text); text-decoration: none; }
+        .user-chip { display: flex; align-items: center; gap: 10px; }
         .avatar {
-            width: 34px; height: 34px;
-            border-radius: 50%;
-            background: var(--brand-soft);
-            color: var(--brand-strong);
-            display: grid; place-items: center;
-            font-weight: 700;
-            text-transform: uppercase;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--accent-soft); color: var(--accent);
+            display: grid; place-items: center; font-weight: 650; font-size: 13px; text-transform: uppercase;
         }
+        .user-email { color: var(--text-muted); font-size: 13px; }
 
-        /* ---------- Buttons ---------- */
+        /* Buttons */
         button {
-            font: inherit;
-            cursor: pointer;
-            border: none;
-            border-radius: 9px;
-            padding: 10px 18px;
-            font-weight: 600;
-            font-size: 14px;
-            background: var(--brand);
-            color: #fff;
-            transition: transform .06s ease, background .15s ease, opacity .15s ease;
+            font: inherit; cursor: pointer;
+            border: 1px solid transparent; border-radius: 6px;
+            padding: 9px 16px; font-weight: 550; font-size: 14px;
+            background: var(--accent); color: #fff;
+            transition: background .12s;
         }
-        button:hover { background: var(--brand-strong); }
-        button:active { transform: translateY(1px); }
-        button:disabled { opacity: .55; cursor: not-allowed; }
-        button.ghost {
-            background: transparent;
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-        button.ghost:hover { background: var(--surface-2); }
-        button.danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
-        button.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
-        button.sm { padding: 7px 12px; font-size: 13px; }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+        button.secondary:hover { background: var(--surface-2); }
+        button.link { background: none; color: var(--danger); border: none; padding: 6px 10px; }
+        button.link:hover { background: var(--danger-bg); }
+        button.sm { padding: 6px 12px; font-size: 13px; }
+        button.full { width: 100%; }
 
-        /* ---------- Layout ---------- */
-        .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+        .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 72px; }
 
-        /* ---------- Hero (logged out) ---------- */
-        .hero {
-            text-align: center;
-            padding: 40px 0 28px;
+        /* Landing */
+        .landing-grid {
+            display: grid; grid-template-columns: 1fr 420px; gap: 56px; align-items: start;
         }
-        .hero h1 {
-            font-size: clamp(30px, 5vw, 46px);
-            letter-spacing: -0.03em;
-            line-height: 1.1;
-            margin-bottom: 14px;
+        @media (max-width: 880px) { .landing-grid { grid-template-columns: 1fr; gap: 32px; } }
+        .lede h1 {
+            font-size: 34px; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 16px; font-weight: 700;
         }
-        .hero .grad {
-            background: linear-gradient(120deg, var(--brand), #a855f7);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+        .lede p.sub { font-size: 17px; color: var(--text-muted); max-width: 46ch; margin-bottom: 28px; }
+        .points { list-style: none; display: grid; gap: 14px; }
+        .points li { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; }
+        .points .ck {
+            flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+            background: var(--accent-soft); color: var(--accent);
+            display: grid; place-items: center; margin-top: 1px;
         }
-        .hero p {
-            color: var(--text-muted);
-            font-size: 17px;
-            max-width: 560px;
-            margin: 0 auto;
-        }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 40px;
-        }
-        .feature {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 22px;
-            text-align: left;
-            box-shadow: var(--shadow);
-        }
-        .feature .ico { font-size: 24px; margin-bottom: 10px; }
-        .feature h3 { font-size: 15px; margin-bottom: 4px; }
-        .feature p { font-size: 13px; color: var(--text-muted); }
+        .points strong { font-weight: 600; }
+        .points span.d { color: var(--text-muted); }
+        .doc-hint { margin-top: 28px; font-size: 14px; color: var(--text-muted); }
 
-        /* ---------- Auth card ---------- */
-        .auth-card {
-            max-width: 420px;
-            margin: 36px auto 0;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
+        /* Cards / panels */
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow);
         }
-        .tabs { display: flex; }
+        .auth { overflow: hidden; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border); }
         .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-muted);
-            background: var(--surface-2);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
+            flex: 1; text-align: center; padding: 14px; font-weight: 550; font-size: 14px;
+            color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
         }
-        .tab.active {
-            color: var(--brand);
-            background: var(--surface);
-            border-bottom-color: var(--brand);
-        }
+        .tab.active { color: var(--text); border-bottom-color: var(--accent); }
         .auth-body { padding: 26px 24px; }
-        .form-group { margin-bottom: 16px; }
-        label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
-        input[type="email"], input[type="password"], input[type="text"] {
-            width: 100%;
-            padding: 11px 13px;
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            background: var(--surface-2);
-            color: var(--text);
-            font-size: 14px;
-            transition: border-color .15s, box-shadow .15s;
+        .field { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 550; color: var(--text-muted); margin-bottom: 6px; }
+        input[type=email], input[type=password], input[type=text] {
+            width: 100%; padding: 10px 12px; font-size: 14px;
+            border: 1px solid var(--border-strong); border-radius: 6px;
+            background: var(--surface); color: var(--text);
         }
-        input:focus {
-            outline: none;
-            border-color: var(--brand);
-            box-shadow: 0 0 0 3px var(--brand-soft);
-        }
-        .full { width: 100%; justify-content: center; margin-top: 4px; }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
-        /* ---------- Dashboard ---------- */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 18px 20px;
-            box-shadow: var(--shadow);
-        }
-        .stat .k { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
-        .stat .v { font-size: 26px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
+        /* Dashboard */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+        @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+        .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+        .stat .k { font-size: 12px; color: var(--text-faint); font-weight: 550; text-transform: uppercase; letter-spacing: .04em; }
+        .stat .v { font-size: 24px; font-weight: 680; margin-top: 6px; letter-spacing: -0.02em; }
+        .stat .v small { font-size: 14px; font-weight: 550; color: var(--text-muted); }
 
-        .panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 22px;
-            box-shadow: var(--shadow);
-            margin-bottom: 22px;
-        }
-        .panel-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .panel-head h2 { font-size: 16px; letter-spacing: -0.01em; }
+        .panel { padding: 22px 24px; margin-bottom: 22px; }
+        .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .panel-head h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 
-        /* Dropzone */
         .dropzone {
-            border: 2px dashed var(--border);
-            border-radius: var(--radius);
-            padding: 34px 20px;
-            text-align: center;
-            color: var(--text-muted);
-            transition: border-color .15s, background .15s;
-            cursor: pointer;
+            border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
+            padding: 30px 20px; text-align: center; color: var(--text-muted);
+            cursor: pointer; transition: border-color .12s, background .12s;
         }
-        .dropzone:hover, .dropzone.drag {
-            border-color: var(--brand);
-            background: var(--brand-soft);
-            color: var(--brand-strong);
-        }
-        .dropzone .big { font-size: 30px; margin-bottom: 8px; }
-        .dropzone .fname { font-weight: 600; color: var(--text); margin-top: 6px; word-break: break-all; }
-        .upload-row { display: flex; gap: 10px; margin-top: 14px; }
+        .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+        .dropzone .icn { color: var(--text-faint); margin-bottom: 8px; }
+        .dropzone .fname { color: var(--text); font-weight: 600; margin-top: 8px; word-break: break-all; }
+        .upload-row { display: flex; gap: 10px; margin-top: 16px; }
 
-        /* File list */
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 13px 14px;
-            border: 1px solid var(--border);
-            border-radius: 11px;
-            margin-bottom: 10px;
-            background: var(--surface-2);
+        table.files { width: 100%; border-collapse: collapse; }
+        table.files th {
+            text-align: left; font-size: 12px; font-weight: 600; color: var(--text-faint);
+            text-transform: uppercase; letter-spacing: .04em; padding: 0 12px 10px; border-bottom: 1px solid var(--border);
         }
-        .file-item:last-child { margin-bottom: 0; }
-        .file-ico {
-            width: 42px; height: 42px;
-            border-radius: 10px;
-            display: grid; place-items: center;
-            font-size: 20px;
-            background: var(--brand-soft);
-            flex-shrink: 0;
+        table.files td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        table.files tr:last-child td { border-bottom: none; }
+        .fcell { display: flex; align-items: center; gap: 12px; }
+        .ftag {
+            flex-shrink: 0; width: 40px; height: 40px; border-radius: 6px;
+            display: grid; place-items: center; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+            background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
         }
-        .file-main { flex: 1; min-width: 0; }
-        .file-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .file-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-        .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .fname-cell { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px; }
+        .col-actions { text-align: right; white-space: nowrap; }
+        td.muted, .col-meta { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
 
-        .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-        .empty .big { font-size: 34px; margin-bottom: 8px; }
+        .empty { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+        .empty .icn { color: var(--text-faint); margin-bottom: 12px; }
 
-        /* Messages / toast */
-        .msg { padding: 11px 14px; border-radius: 9px; font-size: 13px; margin-top: 14px; display: none; }
-        .msg.success { background: var(--success-soft); color: var(--success); display: block; }
-        .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+        .msg { padding: 10px 13px; border-radius: 6px; font-size: 13px; margin-top: 14px; display: none; }
+        .msg.success { display: block; background: var(--success-bg); color: var(--success); }
+        .msg.error { display: block; background: var(--danger-bg); color: var(--danger); }
 
         .toast {
-            position: fixed;
-            bottom: 24px; left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: var(--text);
-            color: var(--bg);
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            box-shadow: var(--shadow);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity .2s, transform .2s;
-            z-index: 50;
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: var(--text); color: var(--bg);
+            padding: 11px 18px; border-radius: 7px; font-size: 14px; font-weight: 550;
+            box-shadow: 0 6px 20px rgba(0,0,0,.2); opacity: 0; pointer-events: none;
+            transition: opacity .18s, transform .18s; z-index: 50;
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
         .hidden { display: none !important; }
-        .muted { color: var(--text-muted); font-size: 13px; }
+        .muted { color: var(--text-muted); }
         .badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 999px;
-            background: var(--brand-soft);
-            color: var(--brand-strong);
-            text-transform: uppercase;
-            letter-spacing: .03em;
+            display: inline-block; font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 4px;
+            background: var(--accent-soft); color: var(--accent); text-transform: uppercase; letter-spacing: .03em;
         }
         .spinner {
-            display: inline-block;
-            width: 15px; height: 15px;
-            border: 2px solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spin .7s linear infinite;
-            vertical-align: -2px;
+            display: inline-block; width: 15px; height: 15px;
+            border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+            animation: spin .7s linear infinite; vertical-align: -2px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <div class="brand">
-            <span class="brand-mark">🔐</span>
-            <span>SecShare</span>
+    <header class="header">
+        <div class="header-inner">
+            <div class="brand">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                </svg>
+                SecShare
+            </div>
+            <nav class="header-nav">
+                <a class="navlink" href="/guide.html">Documentation</a>
+                <div id="userChip" class="user-chip hidden">
+                    <div class="avatar" id="navAvatar">U</div>
+                    <span class="user-email" id="navEmail"></span>
+                    <button class="secondary sm" onclick="logout()">Sign out</button>
+                </div>
+            </nav>
         </div>
-        <div id="navUser" class="nav-user hidden">
-            <div class="avatar" id="navAvatar">U</div>
-            <span id="navEmail" class="muted"></span>
-            <button class="ghost sm" onclick="logout()">Çıkış</button>
-        </div>
-    </div>
+    </header>
 
-    <div class="wrap">
+    <main class="wrap">
         <!-- ===================== LOGGED OUT ===================== -->
         <section id="landing">
-            <div class="hero">
-                <h1>Dosyalarınızı <span class="grad">güvenle</span> saklayın ve paylaşın</h1>
-                <p>SecShare, kimlik doğrulamalı ve şifreli erişimli basit bir dosya paylaşım platformudur. Hesabınızı oluşturun, dosyalarınızı yükleyin ve yönetin.</p>
-            </div>
-
-            <div class="auth-card">
-                <div class="tabs">
-                    <div class="tab active" id="tabLogin" onclick="switchTab('login')">Giriş Yap</div>
-                    <div class="tab" id="tabRegister" onclick="switchTab('register')">Kayıt Ol</div>
+            <div class="landing-grid">
+                <div class="lede">
+                    <h1>Private, authenticated file sharing you can host yourself.</h1>
+                    <p class="sub">SecShare gives every user a secure, personal space to upload and manage files over a clean REST API. Your files stay yours &mdash; access is protected by JWT authentication.</p>
+                    <ul class="points">
+                        <li>
+                            <span class="ck">&#10003;</span>
+                            <span><strong>Per-user isolation.</strong> <span class="d">You can only see, download, and delete your own files.</span></span>
+                        </li>
+                        <li>
+                            <span class="ck">&#10003;</span>
+                            <span><strong>Token-based access.</strong> <span class="d">Sign in once and every request is authorized with a JWT.</span></span>
+                        </li>
+                        <li>
+                            <span class="ck">&#10003;</span>
+                            <span><strong>Broad format support.</strong> <span class="d">PDF, images, text, Office documents and ZIP archives up to 50&nbsp;MB.</span></span>
+                        </li>
+                    </ul>
+                    <p class="doc-hint">New here? Read the <a href="/guide.html">usage guide</a> to learn how it works.</p>
                 </div>
 
-                <!-- Login -->
-                <div class="auth-body" id="loginForm">
-                    <div class="form-group">
-                        <label>E-posta</label>
-                        <input type="email" id="loginEmail" placeholder="ornek@eposta.com" autocomplete="email">
+                <div class="card auth">
+                    <div class="tabs">
+                        <div class="tab active" id="tabLogin" onclick="switchTab('login')">Sign in</div>
+                        <div class="tab" id="tabRegister" onclick="switchTab('register')">Create account</div>
                     </div>
-                    <div class="form-group">
-                        <label>Parola</label>
-                        <input type="password" id="loginPassword" placeholder="Parolanız" autocomplete="current-password"
-                               onkeydown="if(event.key==='Enter') login()">
-                    </div>
-                    <button class="full" id="loginBtn" onclick="login()">Giriş Yap</button>
-                    <div id="loginMsg" class="msg"></div>
-                </div>
 
-                <!-- Register -->
-                <div class="auth-body hidden" id="registerForm">
-                    <div class="form-group">
-                        <label>E-posta</label>
-                        <input type="email" id="regEmail" placeholder="ornek@eposta.com" autocomplete="email">
+                    <div class="auth-body" id="loginForm">
+                        <div class="field">
+                            <label>Email</label>
+                            <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+                        </div>
+                        <div class="field">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password"
+                                   onkeydown="if(event.key==='Enter') login()">
+                        </div>
+                        <button class="full" id="loginBtn" onclick="login()">Sign in</button>
+                        <div id="loginMsg" class="msg"></div>
                     </div>
-                    <div class="form-group">
-                        <label>Parola <span class="muted">(en az 8 karakter)</span></label>
-                        <input type="password" id="regPassword" placeholder="Güçlü bir parola" autocomplete="new-password"
-                               onkeydown="if(event.key==='Enter') register()">
-                    </div>
-                    <button class="full" id="regBtn" onclick="register()">Hesap Oluştur</button>
-                    <div id="regMsg" class="msg"></div>
-                </div>
-            </div>
 
-            <div class="features">
-                <div class="feature">
-                    <div class="ico">🔒</div>
-                    <h3>JWT Kimlik Doğrulama</h3>
-                    <p>Her istek token ile korunur; dosyalarınıza yalnızca siz erişirsiniz.</p>
-                </div>
-                <div class="feature">
-                    <div class="ico">⬆️</div>
-                    <h3>Kolay Yükleme</h3>
-                    <p>Sürükle-bırak ile 50MB'a kadar PDF, görsel, ofis ve arşiv dosyaları.</p>
-                </div>
-                <div class="feature">
-                    <div class="ico">🗂️</div>
-                    <h3>Dosya Yönetimi</h3>
-                    <p>Yüklediğiniz dosyaları listeleyin, indirin ve dilediğinizde silin.</p>
+                    <div class="auth-body hidden" id="registerForm">
+                        <div class="field">
+                            <label>Email</label>
+                            <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email">
+                        </div>
+                        <div class="field">
+                            <label>Password <span class="muted">(at least 8 characters)</span></label>
+                            <input type="password" id="regPassword" placeholder="Choose a strong password" autocomplete="new-password"
+                                   onkeydown="if(event.key==='Enter') register()">
+                        </div>
+                        <button class="full" id="regBtn" onclick="register()">Create account</button>
+                        <div id="regMsg" class="msg"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -422,51 +297,56 @@
         <section id="dashboard" class="hidden">
             <div class="stats">
                 <div class="stat">
-                    <div class="k">Toplam Dosya</div>
+                    <div class="k">Files</div>
                     <div class="v" id="statCount">0</div>
                 </div>
                 <div class="stat">
-                    <div class="k">Kullanılan Alan</div>
-                    <div class="v" id="statSize">0 B</div>
+                    <div class="k">Storage used</div>
+                    <div class="v" id="statSize">0 <small>B</small></div>
                 </div>
                 <div class="stat">
-                    <div class="k">Rol</div>
+                    <div class="k">Role</div>
                     <div class="v"><span class="badge" id="statRole">USER</span></div>
                 </div>
                 <div class="stat">
-                    <div class="k">Üyelik</div>
-                    <div class="v" id="statSince" style="font-size:16px;">—</div>
+                    <div class="k">Member since</div>
+                    <div class="v" id="statSince" style="font-size:16px;">&mdash;</div>
                 </div>
             </div>
 
-            <div class="panel">
+            <div class="card panel">
                 <div class="panel-head">
-                    <h2>Dosya Yükle</h2>
-                    <span class="muted">Maks. 50MB</span>
+                    <h2>Upload a file</h2>
+                    <span class="muted" style="font-size:13px;">Max 50 MB</span>
                 </div>
                 <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-                    <div class="big">📤</div>
-                    <div>Dosyayı buraya sürükleyin ya da <strong>tıklayıp seçin</strong></div>
-                    <div class="muted" style="margin-top:6px;">PDF, PNG, JPG, TXT, DOC(X), XLSX, ZIP</div>
+                    <div class="icn">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
+                        </svg>
+                    </div>
+                    <div>Drag a file here, or <strong>click to browse</strong></div>
+                    <div class="muted" style="font-size:13px; margin-top:6px;">PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP</div>
                     <div class="fname hidden" id="chosenName"></div>
                 </div>
                 <input type="file" id="fileInput" class="hidden">
                 <div class="upload-row">
-                    <button id="uploadBtn" onclick="uploadFile()" disabled>Yükle</button>
-                    <button class="ghost" id="clearBtn" onclick="clearSelection()" disabled>Temizle</button>
+                    <button id="uploadBtn" onclick="uploadFile()" disabled>Upload</button>
+                    <button class="secondary" id="clearBtn" onclick="clearSelection()" disabled>Clear</button>
                 </div>
                 <div id="uploadMsg" class="msg"></div>
             </div>
 
-            <div class="panel">
+            <div class="card panel">
                 <div class="panel-head">
-                    <h2>Dosyalarım</h2>
-                    <button class="ghost sm" onclick="loadFiles()">↻ Yenile</button>
+                    <h2>Your files</h2>
+                    <button class="secondary sm" onclick="loadFiles()">Refresh</button>
                 </div>
                 <div id="fileList"></div>
             </div>
         </section>
-    </div>
+    </main>
 
     <div class="toast" id="toast"></div>
 
@@ -483,7 +363,6 @@
         let selectedFile = null;
         let currentFiles = [];
 
-        /* ---------- helpers ---------- */
         function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
 
         function showMsg(id, text, ok) {
@@ -506,7 +385,7 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
         }
 
-        function busy(btnId, on, label) {
+        function busy(btnId, on) {
             const btn = document.getElementById(btnId);
             btn.disabled = on;
             if (on) { btn.dataset.label = btn.innerHTML; btn.innerHTML = '<span class="spinner"></span>'; }
@@ -519,6 +398,10 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return (bytes / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sizes[i];
         }
+        function formatSizeParts(bytes) {
+            const s = formatSize(bytes).split(' ');
+            return s[0] + ' <small>' + s[1] + '</small>';
+        }
 
         function escapeHtml(text) {
             const d = document.createElement('div');
@@ -526,18 +409,11 @@
             return d.innerHTML;
         }
 
-        function fileIcon(name, type) {
-            const ext = (name.split('.').pop() || '').toLowerCase();
-            if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return '🖼️';
-            if (ext === 'pdf') return '📕';
-            if (['doc', 'docx'].includes(ext)) return '📘';
-            if (['xls', 'xlsx', 'csv'].includes(ext)) return '📗';
-            if (['zip', 'rar', '7z'].includes(ext)) return '🗜️';
-            if (['txt', 'md'].includes(ext)) return '📄';
-            return '📎';
+        function fileTag(name) {
+            const ext = (name.split('.').pop() || '').toUpperCase();
+            return ext.length <= 4 ? ext : ext.slice(0, 4);
         }
 
-        /* ---------- tabs ---------- */
         function switchTab(which) {
             const isLogin = which === 'login';
             document.getElementById('tabLogin').classList.toggle('active', isLogin);
@@ -546,13 +422,12 @@
             document.getElementById('registerForm').classList.toggle('hidden', isLogin);
         }
 
-        /* ---------- auth ---------- */
         async function register() {
             clearMsg('regMsg');
             const email = document.getElementById('regEmail').value.trim();
             const password = document.getElementById('regPassword').value;
-            if (!email || !password) return showMsg('regMsg', 'E-posta ve parola gerekli', false);
-            if (password.length < 8) return showMsg('regMsg', 'Parola en az 8 karakter olmalı', false);
+            if (!email || !password) return showMsg('regMsg', 'Email and password are required.', false);
+            if (password.length < 8) return showMsg('regMsg', 'Password must be at least 8 characters.', false);
 
             busy('regBtn', true);
             try {
@@ -562,17 +437,17 @@
                     body: JSON.stringify({ email, password })
                 });
                 if (res.status === 201) {
-                    showMsg('regMsg', 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.', true);
+                    showMsg('regMsg', 'Account created. You can sign in now.', true);
                     document.getElementById('loginEmail').value = email;
                     document.getElementById('loginPassword').value = password;
-                    setTimeout(() => { switchTab('login'); }, 800);
+                    setTimeout(() => switchTab('login'), 700);
                 } else if (res.status === 409) {
-                    showMsg('regMsg', 'Bu e-posta zaten kayıtlı', false);
+                    showMsg('regMsg', 'That email is already registered.', false);
                 } else {
-                    showMsg('regMsg', 'Kayıt başarısız (' + res.status + ')', false);
+                    showMsg('regMsg', 'Registration failed (' + res.status + ').', false);
                 }
             } catch (e) {
-                showMsg('regMsg', 'Bağlantı hatası', false);
+                showMsg('regMsg', 'Network error. Please try again.', false);
             } finally { busy('regBtn', false); }
         }
 
@@ -580,7 +455,7 @@
             clearMsg('loginMsg');
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
-            if (!email || !password) return showMsg('loginMsg', 'E-posta ve parola gerekli', false);
+            if (!email || !password) return showMsg('loginMsg', 'Email and password are required.', false);
 
             busy('loginBtn', true);
             try {
@@ -595,12 +470,12 @@
                     localStorage.setItem('secshare_token', token);
                     await enterApp();
                 } else if (res.status === 401) {
-                    showMsg('loginMsg', 'E-posta veya parola hatalı', false);
+                    showMsg('loginMsg', 'Invalid email or password.', false);
                 } else {
-                    showMsg('loginMsg', 'Giriş başarısız (' + res.status + ')', false);
+                    showMsg('loginMsg', 'Sign in failed (' + res.status + ').', false);
                 }
             } catch (e) {
-                showMsg('loginMsg', 'Bağlantı hatası', false);
+                showMsg('loginMsg', 'Network error. Please try again.', false);
             } finally { busy('loginBtn', false); }
         }
 
@@ -608,81 +483,100 @@
             token = '';
             selectedFile = null;
             localStorage.removeItem('secshare_token');
-            document.getElementById('navUser').classList.add('hidden');
+            document.getElementById('userChip').classList.add('hidden');
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('landing').classList.remove('hidden');
             document.getElementById('loginPassword').value = '';
-            toast('Çıkış yapıldı');
+            toast('Signed out.');
         }
 
         async function enterApp() {
-            // fetch profile
             let me;
             try {
                 const res = await fetch(API.me, { headers: authHeaders() });
-                if (!res.ok) { throw new Error('unauthorized'); }
+                if (!res.ok) throw new Error('unauthorized');
                 me = await res.json();
             } catch (e) {
-                // token invalid/expired
                 token = '';
                 localStorage.removeItem('secshare_token');
                 document.getElementById('landing').classList.remove('hidden');
                 document.getElementById('dashboard').classList.add('hidden');
-                document.getElementById('navUser').classList.add('hidden');
+                document.getElementById('userChip').classList.add('hidden');
                 return;
             }
 
-            const initial = (me.email || '?').charAt(0);
-            document.getElementById('navAvatar').textContent = initial;
+            document.getElementById('navAvatar').textContent = (me.email || '?').charAt(0);
             document.getElementById('navEmail').textContent = me.email;
-            document.getElementById('navUser').classList.remove('hidden');
+            document.getElementById('userChip').classList.remove('hidden');
 
             document.getElementById('statRole').textContent = (me.roles && me.roles.length) ? me.roles.join(', ') : 'USER';
             document.getElementById('statSince').textContent = me.createdAt
-                ? new Date(me.createdAt).toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' })
+                ? new Date(me.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                 : '—';
 
             document.getElementById('landing').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
-
             await loadFiles();
         }
 
-        /* ---------- files ---------- */
         async function loadFiles() {
             const list = document.getElementById('fileList');
             list.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
             try {
                 const res = await fetch(API.files, { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { list.innerHTML = '<div class="empty">Dosyalar yüklenemedi</div>'; return; }
+                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load files.</div>'; return; }
 
                 const files = await res.json();
                 currentFiles = files;
                 document.getElementById('statCount').textContent = files.length;
                 const total = files.reduce((s, f) => s + (f.sizeBytes || 0), 0);
-                document.getElementById('statSize').textContent = formatSize(total);
+                document.getElementById('statSize').innerHTML = formatSizeParts(total);
 
                 if (!files.length) {
-                    list.innerHTML = '<div class="empty"><div class="big">🗂️</div>Henüz dosya yok. İlk dosyanızı yükleyin!</div>';
+                    list.innerHTML = `
+                        <div class="empty">
+                            <div class="icn">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+                                </svg>
+                            </div>
+                            No files yet. Upload your first file above.
+                        </div>`;
                     return;
                 }
 
-                list.innerHTML = files.map(f => `
-                    <div class="file-item">
-                        <div class="file-ico">${fileIcon(f.name, f.contentType)}</div>
-                        <div class="file-main">
-                            <div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
-                            <div class="file-meta">${formatSize(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('tr-TR')}</div>
-                        </div>
-                        <div class="file-actions">
-                            <button class="ghost sm" onclick="downloadFile('${f.id}')">İndir</button>
-                            <button class="danger sm" onclick="deleteFile('${f.id}')">Sil</button>
-                        </div>
-                    </div>
-                `).join('');
+                list.innerHTML = `
+                    <table class="files">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="col-meta">Size</th>
+                                <th class="col-meta">Uploaded</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${files.map(f => `
+                                <tr>
+                                    <td>
+                                        <div class="fcell">
+                                            <div class="ftag">${fileTag(f.name)}</div>
+                                            <div class="fname-cell" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                                        </div>
+                                    </td>
+                                    <td class="muted">${formatSize(f.sizeBytes)}</td>
+                                    <td class="muted">${new Date(f.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                    <td class="col-actions">
+                                        <button class="secondary sm" onclick="downloadFile('${f.id}')">Download</button>
+                                        <button class="link" onclick="deleteFile('${f.id}')">Delete</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
             } catch (e) {
-                list.innerHTML = '<div class="empty">Bağlantı hatası</div>';
+                list.innerHTML = '<div class="empty">Network error.</div>';
             }
         }
 
@@ -690,7 +584,7 @@
             if (!file) return;
             selectedFile = file;
             const el = document.getElementById('chosenName');
-            el.textContent = '📎 ' + file.name + '  (' + formatSize(file.size) + ')';
+            el.textContent = file.name + '  (' + formatSize(file.size) + ')';
             el.classList.remove('hidden');
             document.getElementById('uploadBtn').disabled = false;
             document.getElementById('clearBtn').disabled = false;
@@ -708,7 +602,7 @@
 
         async function uploadFile() {
             if (!selectedFile) return;
-            if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', 'Dosya çok büyük (maks 50MB)', false);
+            if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
 
             const formData = new FormData();
             formData.append('file', selectedFile);
@@ -718,14 +612,14 @@
                 if (res.status === 401) { logout(); return; }
                 if (res.ok) {
                     clearSelection();
-                    toast('Dosya yüklendi ✓');
+                    toast('File uploaded.');
                     await loadFiles();
                 } else {
                     const err = await res.text();
-                    showMsg('uploadMsg', 'Yükleme başarısız: ' + (err || res.status), false);
+                    showMsg('uploadMsg', 'Upload failed: ' + (err || res.status), false);
                 }
             } catch (e) {
-                showMsg('uploadMsg', 'Bağlantı hatası', false);
+                showMsg('uploadMsg', 'Network error. Please try again.', false);
             } finally { busy('uploadBtn', false); }
         }
 
@@ -734,39 +628,33 @@
             const name = meta ? meta.name : 'download';
             try {
                 const res = await fetch(API.files + '/' + id, { headers: authHeaders() });
-                if (!res.ok) { toast('İndirme başarısız'); return; }
+                if (!res.ok) { toast('Download failed.'); return; }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = name;
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
-            } catch (e) { toast('İndirme hatası'); }
+            } catch (e) { toast('Download error.'); }
         }
 
         async function deleteFile(id) {
-            if (!confirm('Bu dosyayı silmek istediğinize emin misiniz?')) return;
+            if (!confirm('Delete this file permanently?')) return;
             try {
                 const res = await fetch(API.files + '/' + id, { method: 'DELETE', headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 204) { toast('Dosya silindi'); await loadFiles(); }
-                else toast('Silme başarısız');
-            } catch (e) { toast('Silme hatası'); }
+                if (res.status === 204) { toast('File deleted.'); await loadFiles(); }
+                else toast('Delete failed.');
+            } catch (e) { toast('Delete error.'); }
         }
 
-        /* ---------- drag & drop ---------- */
         const dz = document.getElementById('dropzone');
         document.getElementById('fileInput').addEventListener('change', e => chooseFile(e.target.files[0]));
-        ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => {
-            e.preventDefault(); dz.classList.add('drag');
-        }));
-        ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
-            e.preventDefault(); dz.classList.remove('drag');
-        }));
+        ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+        ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
         dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) chooseFile(e.dataTransfer.files[0]); });
 
-        /* ---------- boot ---------- */
-        if (token) { enterApp(); }
+        if (token) enterApp();
     </script>
 </body>
 </html>
