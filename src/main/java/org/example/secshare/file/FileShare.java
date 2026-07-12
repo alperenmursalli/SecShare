@@ -60,7 +60,9 @@ public class FileShare {
      * irreversibly destroyed as soon as it is downloaded once (or when the link expires
      * unread, via the scheduled reaper).
      */
-    @Column(name = "burn_after_access", nullable = false)
+    // columnDefinition supplies a DB default so ddl-auto=update can add this NOT NULL column
+    // to an already-populated table without failing on existing rows.
+    @Column(name = "burn_after_access", nullable = false, columnDefinition = "boolean default false")
     private boolean burnAfterAccess = false;
 
     // --- USER grant field ---

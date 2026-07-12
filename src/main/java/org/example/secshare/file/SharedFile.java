@@ -36,8 +36,10 @@ public class SharedFile {
     @Column(name = "deleted", nullable = false)
     private boolean deleted = false;
 
+    // columnDefinition supplies a DB default so ddl-auto=update can add this NOT NULL column
+    // to an already-populated table (existing rows predate scanning → treated as CLEAN).
     @Enumerated(EnumType.STRING)
-    @Column(name = "scan_status", nullable = false)
+    @Column(name = "scan_status", nullable = false, columnDefinition = "varchar(255) default 'CLEAN'")
     private ScanStatus scanStatus = ScanStatus.PENDING;
 
     public UUID getId() {
