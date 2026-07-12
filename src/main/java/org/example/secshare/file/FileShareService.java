@@ -95,6 +95,8 @@ public class FileShareService {
             }
             share.setMaxDownloads(req.maxDownloads());
         }
+
+        share.setBurnAfterAccess(Boolean.TRUE.equals(req.burnAfterAccess()));
     }
 
     private void configureUserGrant(FileShare share, SharedFile file, CreateShareRequest req) {
@@ -172,10 +174,16 @@ public class FileShareService {
 
     /**
      * Validates a share link (revocation, expiry, download limit, password) and, on
-     * success, increments the download counter and returns the underlying file.
+     * success, increments the download counter and returns the file to serve.
+     *
+     * <p>For a burn-after-reading link, the share is revoked in the same transaction so the
+     * token can never resolve again; the caller is then responsible for destroying the
+     * file's bytes (see {@link LinkDownload#burn()}). Note: revocation here is best-effort
+     * against races — two simultaneous requests could both pass the {@code revokedFalse}
+     * lookup before either commits. A pessimistic lock would close that window entirely.</p>
      */
     @Transactional
-    public SharedFile resolveLinkForDownload(String token, String password) {
+    public LinkDownload resolveLinkForDownload(String token, String password) {
         FileShare share = fileShareRepository.findByTokenAndRevokedFalse(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
 
@@ -196,8 +204,11 @@ public class FileShareService {
         }
 
         share.setDownloadCount(share.getDownloadCount() + 1);
+        if (share.isBurnAfterAccess()) {
+            share.setRevoked(true); // one-time: the link is spent the moment it is read
+        }
         fileShareRepository.save(share);
-        return share.getFile();
+        return new LinkDownload(share.getFile(), share.isBurnAfterAccess());
     }
 
     // ---------------------------------------------------------------------
@@ -239,6 +250,7 @@ public class FileShareService {
                 share.getExpiresAt(),
                 share.getMaxDownloads(),
                 share.getDownloadCount(),
+                share.isBurnAfterAccess(),
                 share.isRevoked(),
                 share.isActive(),
                 share.getCreatedAt()

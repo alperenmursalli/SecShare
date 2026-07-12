@@ -36,8 +36,18 @@ public class PublicShareController {
             @RequestBody(required = false) DownloadShareRequest request
     ) {
         String password = request != null ? request.password() : null;
-        SharedFile file = fileShareService.resolveLinkForDownload(token, password);
-        Resource resource = fileService.loadResource(file);
+        LinkDownload dl = fileShareService.resolveLinkForDownload(token, password);
+        SharedFile file = dl.file();
+
+        final Resource resource;
+        if (dl.burn()) {
+            // Capture the bytes, then irreversibly destroy the file before responding.
+            byte[] content = fileService.readAllBytes(file);
+            fileService.purge(file);
+            resource = fileService.asResource(content);
+        } else {
+            resource = fileService.loadResource(file);
+        }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.getContentType()))

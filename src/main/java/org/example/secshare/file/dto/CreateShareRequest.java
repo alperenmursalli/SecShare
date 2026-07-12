@@ -12,6 +12,7 @@ public record CreateShareRequest(
         String recipientEmail,
         String password,
         Long expiresInMinutes,
-        Integer maxDownloads
+        Integer maxDownloads,
+        Boolean burnAfterAccess
 ) {
 }

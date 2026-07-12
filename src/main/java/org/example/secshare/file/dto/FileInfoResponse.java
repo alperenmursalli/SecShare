@@ -8,7 +8,8 @@ public record FileInfoResponse(
         String name,
         long sizeBytes,
         String contentType,
-        Instant createdAt
+        Instant createdAt,
+        String scanStatus
 ) {
 }
 

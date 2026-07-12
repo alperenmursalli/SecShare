@@ -256,6 +256,21 @@
             background: var(--surface-2); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em;
             border: 1px solid var(--border); margin-right: 6px; vertical-align: 1px;
         }
+        .chip-burn {
+            display: inline-block; font-size: 10px; font-weight: 650; padding: 1px 6px; border-radius: 4px;
+            background: var(--danger-bg); color: var(--danger); text-transform: uppercase; letter-spacing: .03em;
+            margin-right: 6px; vertical-align: 1px;
+        }
+        .check-row {
+            display: flex; align-items: flex-start; gap: 9px;
+            margin: 2px 0 16px; font-size: 13.5px; cursor: pointer; user-select: none;
+        }
+        .check-row input { width: auto; margin: 2px 0 0; flex: none; }
+        .scan-badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: 11px; font-weight: 600; color: #0a7c42; margin-left: 6px; vertical-align: 1px;
+        }
+        @media (prefers-color-scheme: dark) { .scan-badge { color: #4ade80; } }
     </style>
 </head>
 <body>
@@ -374,7 +389,7 @@
                         </svg>
                     </div>
                     <div>Drag a file here, or <strong>click to browse</strong></div>
-                    <div class="muted" style="font-size:13px; margin-top:6px;">PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP</div>
+                    <div class="muted" style="font-size:13px; margin-top:6px;">PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP · scanned for malware on upload</div>
                     <div class="fname hidden" id="chosenName"></div>
                 </div>
                 <input type="file" id="fileInput" class="hidden">
@@ -451,6 +466,10 @@
                         <label>Password <span class="muted">(optional)</span></label>
                         <input type="text" id="shPassword" placeholder="Leave blank for no password" autocomplete="off">
                     </div>
+                    <label class="check-row" for="shBurn">
+                        <input type="checkbox" id="shBurn">
+                        <span>🔥 Burn after reading <span class="muted">— the file is permanently destroyed after one download</span></span>
+                    </label>
                     <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
                     <div id="shLinkMsg" class="msg"></div>
                     <div class="copy-box hidden" id="shLinkResult">
@@ -721,6 +740,7 @@
             document.getElementById('shExpiry').value = '';
             document.getElementById('shMaxDownloads').value = '';
             document.getElementById('shPassword').value = '';
+            document.getElementById('shBurn').checked = false;
             document.getElementById('shRecipient').value = '';
             clearMsg('shLinkMsg');
             clearMsg('shUserMsg');
@@ -757,6 +777,7 @@
             }
             const pw = document.getElementById('shPassword').value;
             if (pw) body.password = pw;
+            if (document.getElementById('shBurn').checked) body.burnAfterAccess = true;
 
             busy('shCreateBtn', true);
             try {
@@ -831,19 +852,21 @@
                     if (s.type === 'LINK') {
                         title = window.location.origin + s.url;
                         const bits = [];
+                        if (s.burnAfterAccess) bits.push('destroyed after one download');
                         if (s.passwordProtected) bits.push('password');
                         if (s.expiresAt) bits.push('expires ' + new Date(s.expiresAt).toLocaleString());
                         if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' downloads');
-                        else bits.push(s.downloadCount + ' downloads');
+                        else if (!s.burnAfterAccess) bits.push(s.downloadCount + ' downloads');
                         meta = bits.join(' · ');
                     } else {
                         title = escapeHtml(s.recipientEmail);
                         meta = 'granted ' + new Date(s.createdAt).toLocaleDateString();
                     }
+                    const burnChip = s.burnAfterAccess ? '<span class="chip-burn">🔥 Burn</span>' : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
-                                <div class="si-title"><span class="chip-type">${s.type === 'LINK' ? 'Link' : 'User'}</span>${title}</div>
+                                <div class="si-title"><span class="chip-type">${s.type === 'LINK' ? 'Link' : 'User'}</span>${burnChip}${title}</div>
                                 <div class="si-meta">${meta}</div>
                             </div>
                             <button class="link" onclick="revokeShare('${s.id}')">Revoke</button>
@@ -948,6 +971,7 @@
                                         <div class="fcell">
                                             <div class="ftag">${fileTag(f.name)}</div>
                                             <div class="fname-cell" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                                            ${f.scanStatus === 'CLEAN' ? '<span class="scan-badge" title="Scanned on upload — no malware detected">🛡 Clean</span>' : ''}
                                         </div>
                                     </td>
                                     <td class="muted">${formatSize(f.sizeBytes)}</td>
@@ -1000,6 +1024,12 @@
                     clearSelection();
                     toast('File uploaded.');
                     await loadFiles();
+                } else if (res.status === 422) {
+                    showMsg('uploadMsg', 'Upload blocked: this file failed the malware scan and was rejected.', false);
+                } else if (res.status === 400) {
+                    showMsg('uploadMsg', 'Upload rejected: file type not allowed or file is empty.', false);
+                } else if (res.status === 413) {
+                    showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
                 } else {
                     const err = await res.text();
                     showMsg('uploadMsg', 'Upload failed: ' + (err || res.status), false);

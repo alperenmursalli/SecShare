@@ -2,9 +2,13 @@ package org.example.secshare.file;
 
 import org.example.secshare.auth.security.UserPrincipal;
 import org.example.secshare.file.dto.FileInfoResponse;
+import org.example.secshare.file.scan.FileScanService;
+import org.example.secshare.file.scan.ScanResult;
+import org.example.secshare.file.scan.ScanStatus;
 import org.example.secshare.user.User;
 import org.example.secshare.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
@@ -17,7 +21,6 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -34,17 +37,20 @@ public class FileService {
     private final SharedFileRepository sharedFileRepository;
     private final FileShareRepository fileShareRepository;
     private final UserRepository userRepository;
+    private final FileScanService fileScanService;
     private final Path baseStoragePath;
 
     public FileService(
             SharedFileRepository sharedFileRepository,
             FileShareRepository fileShareRepository,
             UserRepository userRepository,
+            FileScanService fileScanService,
             @Value("${app.storage.base-path:/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
         this.fileShareRepository = fileShareRepository;
         this.userRepository = userRepository;
+        this.fileScanService = fileScanService;
         this.baseStoragePath = Paths.get(basePath).toAbsolutePath().normalize();
 
         try {
@@ -73,6 +79,21 @@ public class FileService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This file type is not allowed");
         }
 
+        byte[] content;
+        try {
+            content = file.getBytes();
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read upload");
+        }
+
+        // Scan before anything touches disk — an infected upload never gets persisted.
+        ScanResult scan = fileScanService.scan(content, originalFilename);
+        if (!scan.clean()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "File rejected by malware scan: " + scan.signature());
+        }
+
         UUID fileId = UUID.randomUUID();
         String storageFilename = fileId + (extension.isEmpty() ? "" : "." + extension);
 
@@ -82,7 +103,7 @@ public class FileService {
         }
 
         try {
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(targetPath, content);
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save file");
         }
@@ -99,6 +120,7 @@ public class FileService {
         sharedFile.setSizeBytes(file.getSize());
         sharedFile.setCreatedAt(Instant.now());
         sharedFile.setDeleted(false);
+        sharedFile.setScanStatus(ScanStatus.CLEAN);
 
         sharedFileRepository.save(sharedFile);
 
@@ -174,6 +196,40 @@ public class FileService {
         sharedFile.setDeleted(true);
         sharedFileRepository.save(sharedFile);
 
+        deleteBytesFromDisk(sharedFile);
+    }
+
+    /**
+     * Reads the full bytes of a file from disk into memory. Used for burn-after-reading
+     * downloads, where the physical file must be destroyed immediately after the bytes are
+     * captured (so they can still be streamed to the client). Performs no authorization.
+     */
+    public byte[] readAllBytes(SharedFile sharedFile) {
+        Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
+        try {
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This file is no longer available");
+        }
+    }
+
+    /**
+     * Irreversibly destroys a file: deletes its bytes from disk and soft-deletes the record.
+     * Used by the self-destruct paths (burn-after-reading download and the scheduled reaper).
+     * Performs no authorization — callers must have already established the file should die.
+     */
+    public void purge(SharedFile sharedFile) {
+        sharedFile.setDeleted(true);
+        sharedFileRepository.save(sharedFile);
+        deleteBytesFromDisk(sharedFile);
+    }
+
+    /** Wraps in-memory bytes as a downloadable resource (used after a burn). */
+    public Resource asResource(byte[] content) {
+        return new ByteArrayResource(content);
+    }
+
+    private void deleteBytesFromDisk(SharedFile sharedFile) {
         Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
         try {
             Files.deleteIfExists(filePath);
@@ -187,7 +243,8 @@ public class FileService {
                 file.getOriginalFilename(),
                 file.getSizeBytes(),
                 file.getContentType(),
-                file.getCreatedAt()
+                file.getCreatedAt(),
+                file.getScanStatus() != null ? file.getScanStatus().name() : null
         );
     }
 

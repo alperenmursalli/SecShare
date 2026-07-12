@@ -18,6 +18,7 @@ public record ShareResponse(
         Instant expiresAt,
         Integer maxDownloads,
         int downloadCount,
+        boolean burnAfterAccess,
         boolean revoked,
         boolean active,
         Instant createdAt

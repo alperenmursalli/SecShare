@@ -55,6 +55,14 @@ public class FileShare {
     @Column(name = "download_count", nullable = false)
     private int downloadCount = 0;
 
+    /**
+     * When true, this is an ephemeral "burn-after-reading" link: the underlying file is
+     * irreversibly destroyed as soon as it is downloaded once (or when the link expires
+     * unread, via the scheduled reaper).
+     */
+    @Column(name = "burn_after_access", nullable = false)
+    private boolean burnAfterAccess = false;
+
     // --- USER grant field ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
@@ -153,6 +161,14 @@ public class FileShare {
 
     public void setDownloadCount(int downloadCount) {
         this.downloadCount = downloadCount;
+    }
+
+    public boolean isBurnAfterAccess() {
+        return burnAfterAccess;
+    }
+
+    public void setBurnAfterAccess(boolean burnAfterAccess) {
+        this.burnAfterAccess = burnAfterAccess;
     }
 
     public User getRecipient() {

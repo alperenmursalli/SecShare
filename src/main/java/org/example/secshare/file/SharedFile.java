@@ -1,6 +1,7 @@
 package org.example.secshare.file;
 
 import jakarta.persistence.*;
+import org.example.secshare.file.scan.ScanStatus;
 import org.example.secshare.user.User;
 
 import java.time.Instant;
@@ -34,6 +35,10 @@ public class SharedFile {
 
     @Column(name = "deleted", nullable = false)
     private boolean deleted = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scan_status", nullable = false)
+    private ScanStatus scanStatus = ScanStatus.PENDING;
 
     public UUID getId() {
         return id;
@@ -97,6 +102,14 @@ public class SharedFile {
 
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public ScanStatus getScanStatus() {
+        return scanStatus;
+    }
+
+    public void setScanStatus(ScanStatus scanStatus) {
+        this.scanStatus = scanStatus;
     }
 }
 
