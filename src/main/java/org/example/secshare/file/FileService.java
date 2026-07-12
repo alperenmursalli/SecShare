@@ -32,15 +32,18 @@ public class FileService {
     );
 
     private final SharedFileRepository sharedFileRepository;
+    private final FileShareRepository fileShareRepository;
     private final UserRepository userRepository;
     private final Path baseStoragePath;
 
     public FileService(
             SharedFileRepository sharedFileRepository,
+            FileShareRepository fileShareRepository,
             UserRepository userRepository,
             @Value("${app.storage.base-path:/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
+        this.fileShareRepository = fileShareRepository;
         this.userRepository = userRepository;
         this.baseStoragePath = Paths.get(basePath).toAbsolutePath().normalize();
 
@@ -113,8 +116,16 @@ public class FileService {
     }
 
     public Resource loadFile(UUID fileId, UserPrincipal principal) {
-        SharedFile sharedFile = getOwnedFileOrThrow(fileId, principal);
+        SharedFile sharedFile = getAccessibleFileOrThrow(fileId, principal);
+        return loadResource(sharedFile);
+    }
 
+    /**
+     * Builds a readable {@link Resource} for the given file's bytes on disk. Performs no
+     * authorization — callers must have already established access (ownership, a valid
+     * grant, or a valid share link).
+     */
+    public Resource loadResource(SharedFile sharedFile) {
         Path filePath = baseStoragePath.resolve(sharedFile.getStorageFilename()).normalize();
         try {
             Resource resource = new UrlResource(filePath.toUri());
@@ -127,11 +138,31 @@ public class FileService {
         }
     }
 
+    /** Owner-only lookup — used for delete and share management. */
     public SharedFile getOwnedFileOrThrow(UUID fileId, UserPrincipal principal) {
         SharedFile sharedFile = sharedFileRepository.findByIdAndDeletedFalse(fileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
 
         if (!sharedFile.getOwner().getId().equals(principal.userId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this file");
+        }
+
+        return sharedFile;
+    }
+
+    /**
+     * Download-level access: the owner, or a user the file has been granted to via an
+     * active USER share.
+     */
+    public SharedFile getAccessibleFileOrThrow(UUID fileId, UserPrincipal principal) {
+        SharedFile sharedFile = sharedFileRepository.findByIdAndDeletedFalse(fileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+
+        boolean isOwner = sharedFile.getOwner().getId().equals(principal.userId());
+        boolean isGranted = fileShareRepository
+                .existsByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId());
+
+        if (!isOwner && !isGranted) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this file");
         }
 
@@ -148,14 +179,6 @@ public class FileService {
             Files.deleteIfExists(filePath);
         } catch (IOException ignored) {
         }
-    }
-
-    public String getContentType(UUID fileId, UserPrincipal principal) {
-        return getOwnedFileOrThrow(fileId, principal).getContentType();
-    }
-
-    public String getOriginalFilename(UUID fileId, UserPrincipal principal) {
-        return getOwnedFileOrThrow(fileId, principal).getOriginalFilename();
     }
 
     private FileInfoResponse toResponse(SharedFile file) {

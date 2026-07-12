@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecShare — Download shared file</title>
+    <style>
+        :root {
+            --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eef2ff;
+            --bg: #f7f8fa; --surface: #ffffff; --surface-2: #f4f6f8;
+            --border: #e2e5ea; --border-strong: #cfd4dc;
+            --text: #1a1d23; --text-muted: #5b6472; --text-faint: #8a93a2;
+            --success: #0f7d3d; --success-bg: #e7f5ec;
+            --danger: #b42318; --danger-bg: #fdeceb;
+            --radius: 8px; --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --accent: #6690ff; --accent-hover: #7c9dff; --accent-soft: #1a2135;
+                --bg: #0e1015; --surface: #161922; --surface-2: #1c2029;
+                --border: #272c37; --border-strong: #333a47;
+                --text: #e7eaf0; --text-muted: #9aa3b2; --text-faint: #6b7484;
+                --success: #4ade80; --success-bg: #12271a;
+                --danger: #f87171; --danger-bg: #2a1616;
+                --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.25);
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
+            min-height: 100vh; display: grid; place-items: center; padding: 24px;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow);
+            width: 100%; max-width: 440px; overflow: hidden;
+        }
+        .brand {
+            display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 16px;
+            padding: 16px 24px; border-bottom: 1px solid var(--border); letter-spacing: -0.01em;
+        }
+        .brand svg { color: var(--accent); }
+        .body { padding: 28px 24px; }
+        .file-icon {
+            width: 52px; height: 52px; border-radius: 10px; margin: 0 auto 16px;
+            background: var(--accent-soft); color: var(--accent); display: grid; place-items: center;
+        }
+        h1 { font-size: 18px; font-weight: 650; text-align: center; word-break: break-all; letter-spacing: -0.01em; }
+        .sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+        .field { margin-top: 20px; }
+        label { display: block; font-size: 13px; font-weight: 550; color: var(--text-muted); margin-bottom: 6px; }
+        input[type=password] {
+            width: 100%; padding: 10px 12px; font-size: 14px;
+            border: 1px solid var(--border-strong); border-radius: 6px;
+            background: var(--surface); color: var(--text);
+        }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        button {
+            font: inherit; cursor: pointer; border: 1px solid transparent; border-radius: 6px;
+            padding: 11px 16px; font-weight: 550; font-size: 14px; width: 100%; margin-top: 20px;
+            background: var(--accent); color: #fff; transition: background .12s;
+        }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .msg { padding: 10px 13px; border-radius: 6px; font-size: 13px; margin-top: 16px; display: none; text-align: center; }
+        .msg.success { display: block; background: var(--success-bg); color: var(--success); }
+        .msg.error { display: block; background: var(--danger-bg); color: var(--danger); }
+        .state { text-align: center; color: var(--text-muted); padding: 20px 0; }
+        .hidden { display: none !important; }
+        .foot { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 22px; }
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+            animation: spin .7s linear infinite; vertical-align: -3px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4"/>
+            </svg>
+            SecShare
+        </div>
+        <div class="body">
+            <div id="loading" class="state"><span class="spinner"></span> Loading…</div>
+
+            <div id="unavailable" class="hidden">
+                <div class="state" id="unavailableMsg">This link is not available.</div>
+                <div class="foot"><a href="/">Go to SecShare</a></div>
+            </div>
+
+            <div id="fileView" class="hidden">
+                <div class="file-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                    </svg>
+                </div>
+                <h1 id="fileName">file</h1>
+                <div class="sub" id="fileMeta"></div>
+
+                <div class="field hidden" id="passwordField">
+                    <label>This file is password protected</label>
+                    <input type="password" id="password" placeholder="Enter password"
+                           onkeydown="if(event.key==='Enter') download()">
+                </div>
+
+                <button id="downloadBtn" onclick="download()">Download</button>
+                <div id="msg" class="msg"></div>
+                <div class="foot"><a href="/">Powered by SecShare</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('t');
+        let needsPassword = false;
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sizes[i];
+        }
+        function show(id) { document.getElementById(id).classList.remove('hidden'); }
+        function hide(id) { document.getElementById(id).classList.add('hidden'); }
+        function showMsg(text, ok) {
+            const el = document.getElementById('msg');
+            el.textContent = text;
+            el.className = 'msg ' + (ok ? 'success' : 'error');
+        }
+
+        function unavailable(text) {
+            hide('loading'); hide('fileView');
+            document.getElementById('unavailableMsg').textContent = text;
+            show('unavailable');
+        }
+
+        async function loadMeta() {
+            if (!token) { unavailable('Invalid link.'); return; }
+            try {
+                const res = await fetch('/api/public/shares/' + encodeURIComponent(token));
+                if (res.status === 404) { unavailable('This link does not exist.'); return; }
+                if (!res.ok) { unavailable('This link is not available.'); return; }
+                const meta = await res.json();
+                if (!meta.available) { unavailable('This link has expired or is no longer available.'); return; }
+
+                document.getElementById('fileName').textContent = meta.fileName;
+                document.getElementById('fileMeta').textContent =
+                    formatSize(meta.sizeBytes) + (meta.contentType ? ' · ' + meta.contentType : '');
+                needsPassword = meta.needsPassword;
+                if (needsPassword) show('passwordField');
+
+                hide('loading'); show('fileView');
+            } catch (e) {
+                unavailable('Network error. Please try again.');
+            }
+        }
+
+        async function download() {
+            const btn = document.getElementById('downloadBtn');
+            const password = document.getElementById('password').value;
+            if (needsPassword && !password) return showMsg('Please enter the password.', false);
+
+            btn.disabled = true;
+            const label = btn.textContent; btn.innerHTML = '<span class="spinner"></span>';
+            try {
+                const res = await fetch('/api/public/shares/' + encodeURIComponent(token) + '/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                if (res.status === 401) { showMsg('Incorrect password.', false); return; }
+                if (res.status === 410) { showMsg('This link is no longer available.', false); return; }
+                if (res.status === 404) { showMsg('This link does not exist.', false); return; }
+                if (!res.ok) { showMsg('Download failed (' + res.status + ').', false); return; }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = document.getElementById('fileName').textContent;
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+                showMsg('Download started.', true);
+            } catch (e) {
+                showMsg('Network error. Please try again.', false);
+            } finally {
+                btn.disabled = false; btn.textContent = label;
+            }
+        }
+
+        loadMeta();
+    </script>
+</body>
+</html>

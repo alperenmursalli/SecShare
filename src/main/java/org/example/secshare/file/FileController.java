@@ -45,14 +45,13 @@ public class FileController {
             @PathVariable("id") UUID id,
             @AuthenticationPrincipal UserPrincipal user
     ) {
-        Resource resource = fileService.loadFile(id, user);
-
-        String contentType = fileService.getContentType(id, user);
-        String originalFilename = fileService.getOriginalFilename(id, user);
+        SharedFile file = fileService.getAccessibleFileOrThrow(id, user);
+        Resource resource = fileService.loadResource(file);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + originalFilename + "\"")
+                .contentType(MediaType.parseMediaType(file.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + file.getOriginalFilename() + "\"")
                 .body(resource);
     }
     @GetMapping("/all")

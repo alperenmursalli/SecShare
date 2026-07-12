@@ -1,0 +1,247 @@
+package org.example.secshare.file;
+
+import org.example.secshare.auth.security.UserPrincipal;
+import org.example.secshare.file.dto.CreateShareRequest;
+import org.example.secshare.file.dto.PublicShareMetaResponse;
+import org.example.secshare.file.dto.ShareResponse;
+import org.example.secshare.user.User;
+import org.example.secshare.user.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Business logic for sharing files, covering both the public token-link model and the
+ * per-recipient grant model. Ownership is verified by reusing
+ * {@link FileService#getOwnedFileOrThrow}.
+ */
+@Service
+public class FileShareService {
+
+    private static final int TOKEN_BYTES = 24; // ~32 url-safe chars
+    private final SecureRandom secureRandom = new SecureRandom();
+    private final Base64.Encoder tokenEncoder = Base64.getUrlEncoder().withoutPadding();
+
+    private final FileShareRepository fileShareRepository;
+    private final FileService fileService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public FileShareService(
+            FileShareRepository fileShareRepository,
+            FileService fileService,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder
+    ) {
+        this.fileShareRepository = fileShareRepository;
+        this.fileService = fileService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    // ---------------------------------------------------------------------
+    // Owner operations
+    // ---------------------------------------------------------------------
+
+    @Transactional
+    public ShareResponse createShare(UUID fileId, CreateShareRequest req, UserPrincipal principal) {
+        SharedFile file = fileService.getOwnedFileOrThrow(fileId, principal);
+        User owner = requireUser(principal.userId());
+
+        ShareType type = parseType(req.type());
+        FileShare share = new FileShare();
+        share.setId(UUID.randomUUID());
+        share.setFile(file);
+        share.setCreatedBy(owner);
+        share.setType(type);
+        share.setCreatedAt(Instant.now());
+
+        if (type == ShareType.LINK) {
+            configureLink(share, req);
+        } else {
+            configureUserGrant(share, file, req);
+        }
+
+        fileShareRepository.save(share);
+        return toResponse(share);
+    }
+
+    private void configureLink(FileShare share, CreateShareRequest req) {
+        share.setToken(generateToken());
+
+        if (req.password() != null && !req.password().isBlank()) {
+            share.setPasswordHash(passwordEncoder.encode(req.password()));
+        }
+
+        if (req.expiresInMinutes() != null) {
+            if (req.expiresInMinutes() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expiry must be positive");
+            }
+            share.setExpiresAt(Instant.now().plus(req.expiresInMinutes(), ChronoUnit.MINUTES));
+        }
+
+        if (req.maxDownloads() != null) {
+            if (req.maxDownloads() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Download limit must be positive");
+            }
+            share.setMaxDownloads(req.maxDownloads());
+        }
+    }
+
+    private void configureUserGrant(FileShare share, SharedFile file, CreateShareRequest req) {
+        if (req.recipientEmail() == null || req.recipientEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recipient email is required");
+        }
+
+        User recipient = userRepository.findByEmailIgnoreCase(req.recipientEmail().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No user with that email"));
+
+        if (recipient.getId().equals(file.getOwner().getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot share a file with yourself");
+        }
+
+        if (fileShareRepository.existsByFileAndRecipientAndRevokedFalse(file, recipient)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "File is already shared with this user");
+        }
+
+        share.setRecipient(recipient);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShareResponse> listSharesForFile(UUID fileId, UserPrincipal principal) {
+        SharedFile file = fileService.getOwnedFileOrThrow(fileId, principal);
+        return fileShareRepository.findByFileAndRevokedFalseOrderByCreatedAtDesc(file)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void revokeShare(UUID shareId, UserPrincipal principal) {
+        FileShare share = fileShareRepository.findById(shareId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Share not found"));
+
+        if (!share.getCreatedBy().getId().equals(principal.userId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this share");
+        }
+
+        share.setRevoked(true);
+        fileShareRepository.save(share);
+    }
+
+    /** Files granted to the current user via active USER shares. */
+    @Transactional(readOnly = true)
+    public List<ShareResponse> listSharedWithMe(UserPrincipal principal) {
+        User me = requireUser(principal.userId());
+        return fileShareRepository
+                .findByRecipientAndTypeAndRevokedFalseOrderByCreatedAtDesc(me, ShareType.USER)
+                .stream()
+                .filter(s -> !s.getFile().isDeleted())
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // ---------------------------------------------------------------------
+    // Public link operations
+    // ---------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public PublicShareMetaResponse getPublicMeta(String token) {
+        FileShare share = fileShareRepository.findByTokenAndRevokedFalse(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+
+        SharedFile file = share.getFile();
+        boolean available = share.isActive() && !file.isDeleted();
+        return new PublicShareMetaResponse(
+                file.getOriginalFilename(),
+                file.getSizeBytes(),
+                file.getContentType(),
+                share.hasPassword(),
+                available
+        );
+    }
+
+    /**
+     * Validates a share link (revocation, expiry, download limit, password) and, on
+     * success, increments the download counter and returns the underlying file.
+     */
+    @Transactional
+    public SharedFile resolveLinkForDownload(String token, String password) {
+        FileShare share = fileShareRepository.findByTokenAndRevokedFalse(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+
+        if (share.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This link has expired");
+        }
+        if (share.isDownloadLimitReached()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This link's download limit has been reached");
+        }
+        if (share.getFile().isDeleted()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This file is no longer available");
+        }
+
+        if (share.hasPassword()) {
+            if (password == null || !passwordEncoder.matches(password, share.getPasswordHash())) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Incorrect password");
+            }
+        }
+
+        share.setDownloadCount(share.getDownloadCount() + 1);
+        fileShareRepository.save(share);
+        return share.getFile();
+    }
+
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+
+    private ShareType parseType(String raw) {
+        if (raw == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Share type is required");
+        }
+        try {
+            return ShareType.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid share type");
+        }
+    }
+
+    private String generateToken() {
+        byte[] bytes = new byte[TOKEN_BYTES];
+        secureRandom.nextBytes(bytes);
+        return tokenEncoder.encodeToString(bytes);
+    }
+
+    private User requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+    }
+
+    private ShareResponse toResponse(FileShare share) {
+        String url = share.getType() == ShareType.LINK ? "/share.html?t=" + share.getToken() : null;
+        return new ShareResponse(
+                share.getId(),
+                share.getType().name(),
+                share.getFile().getId(),
+                share.getFile().getOriginalFilename(),
+                url,
+                share.getRecipient() != null ? share.getRecipient().getEmail() : null,
+                share.hasPassword(),
+                share.getExpiresAt(),
+                share.getMaxDownloads(),
+                share.getDownloadCount(),
+                share.isRevoked(),
+                share.isActive(),
+                share.getCreatedAt()
+        );
+    }
+}

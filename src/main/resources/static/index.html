@@ -209,6 +209,53 @@
             animation: spin .7s linear infinite; vertical-align: -2px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Share modal */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 60;
+            background: rgba(16,24,40,.45);
+            display: grid; place-items: center; padding: 20px;
+        }
+        @media (prefers-color-scheme: dark) { .modal-overlay { background: rgba(0,0,0,.6); } }
+        .modal { width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 22px; border-bottom: 1px solid var(--border);
+        }
+        .modal-head h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+        .modal-head .fname-sub { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+        .icon-x {
+            background: none; color: var(--text-muted); border: none; padding: 4px 8px;
+            font-size: 20px; line-height: 1;
+        }
+        .icon-x:hover { background: var(--surface-2); color: var(--text); }
+        .modal-body { padding: 20px 22px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .field { flex: 1; }
+        select {
+            width: 100%; padding: 10px 12px; font-size: 14px;
+            border: 1px solid var(--border-strong); border-radius: 6px;
+            background: var(--surface); color: var(--text);
+        }
+        select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .copy-box {
+            display: flex; gap: 8px; margin-top: 14px; align-items: stretch;
+        }
+        .copy-box input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+        .share-existing { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 18px; }
+        .share-existing h3 { font-size: 13px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 12px; }
+        .share-item {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+            padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px;
+        }
+        .share-item .si-main { min-width: 0; flex: 1; }
+        .share-item .si-title { font-weight: 550; font-size: 14px; word-break: break-all; }
+        .share-item .si-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .chip-type {
+            display: inline-block; font-size: 10px; font-weight: 650; padding: 1px 6px; border-radius: 4px;
+            background: var(--surface-2); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em;
+            border: 1px solid var(--border); margin-right: 6px; vertical-align: 1px;
+        }
     </style>
 </head>
 <body>
@@ -346,6 +393,14 @@
                 <div id="fileList"></div>
             </div>
 
+            <div class="card panel" id="sharedPanel">
+                <div class="panel-head">
+                    <h2>Shared with me</h2>
+                    <button class="secondary sm" onclick="loadSharedWithMe()">Refresh</button>
+                </div>
+                <div id="sharedList"></div>
+            </div>
+
             <div class="card panel hidden" id="adminPanel">
                 <div class="panel-head">
                     <h2>All files <span class="badge">Admin</span></h2>
@@ -358,6 +413,70 @@
             </div>
         </section>
     </main>
+
+    <!-- ===================== SHARE MODAL ===================== -->
+    <div class="modal-overlay hidden" id="shareModal">
+        <div class="card modal">
+            <div class="modal-head">
+                <div>
+                    <h2>Share file</h2>
+                    <div class="fname-sub" id="shareFileName"></div>
+                </div>
+                <button class="icon-x" onclick="closeShareModal()" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs" style="margin-bottom:20px;">
+                    <div class="tab active" id="shTabLink" onclick="shareTab('link')">Share link</div>
+                    <div class="tab" id="shTabUser" onclick="shareTab('user')">Share with a user</div>
+                </div>
+
+                <!-- Link pane -->
+                <div id="shLinkPane">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>Expires</label>
+                            <select id="shExpiry">
+                                <option value="">Never</option>
+                                <option value="60">1 hour</option>
+                                <option value="1440">24 hours</option>
+                                <option value="10080">7 days</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Download limit <span class="muted">(optional)</span></label>
+                            <input type="text" id="shMaxDownloads" inputmode="numeric" placeholder="e.g. 1 = one-time">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Password <span class="muted">(optional)</span></label>
+                        <input type="text" id="shPassword" placeholder="Leave blank for no password" autocomplete="off">
+                    </div>
+                    <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
+                    <div id="shLinkMsg" class="msg"></div>
+                    <div class="copy-box hidden" id="shLinkResult">
+                        <input type="text" id="shLinkUrl" readonly>
+                        <button class="secondary" onclick="copyLink()">Copy</button>
+                    </div>
+                </div>
+
+                <!-- User pane -->
+                <div id="shUserPane" class="hidden">
+                    <div class="field">
+                        <label>Recipient email</label>
+                        <input type="email" id="shRecipient" placeholder="user@example.com" autocomplete="off"
+                               onkeydown="if(event.key==='Enter') shareWithUser()">
+                    </div>
+                    <button class="full" id="shUserBtn" onclick="shareWithUser()">Share with user</button>
+                    <div id="shUserMsg" class="msg"></div>
+                </div>
+
+                <div class="share-existing">
+                    <h3>Active shares</h3>
+                    <div id="shareList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="toast" id="toast"></div>
 
@@ -534,7 +653,215 @@
             document.getElementById('landing').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             await loadFiles();
+            await loadSharedWithMe();
             if (isAdmin) await loadAllFiles();
+        }
+
+        // ===================== Sharing =====================
+        let shareFileId = null;
+
+        async function loadSharedWithMe() {
+            const list = document.getElementById('sharedList');
+            list.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+            try {
+                const res = await fetch(API.files + '/shared-with-me', { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load shared files.</div>'; return; }
+
+                const shares = await res.json();
+                if (!shares.length) {
+                    list.innerHTML = '<div class="empty" style="padding:28px;">No files have been shared with you yet.</div>';
+                    return;
+                }
+                list.innerHTML = `
+                    <table class="files">
+                        <thead>
+                            <tr><th>Name</th><th class="col-meta">Shared</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            ${shares.map(s => `
+                                <tr>
+                                    <td>
+                                        <div class="fcell">
+                                            <div class="ftag">${fileTag(s.fileName)}</div>
+                                            <div class="fname-cell" title="${escapeHtml(s.fileName)}">${escapeHtml(s.fileName)}</div>
+                                        </div>
+                                    </td>
+                                    <td class="muted">${new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                    <td class="col-actions">
+                                        <button class="secondary sm" onclick="downloadShared('${s.fileId}','${escapeHtml(s.fileName).replace(/'/g, "\\'")}')">Download</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                list.innerHTML = '<div class="empty">Network error.</div>';
+            }
+        }
+
+        async function downloadShared(fileId, name) {
+            try {
+                const res = await fetch(API.files + '/' + fileId, { headers: authHeaders() });
+                if (!res.ok) { toast('Download failed.'); return; }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = name || 'download';
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) { toast('Download error.'); }
+        }
+
+        function openShareModal(fileId) {
+            shareFileId = fileId;
+            const meta = currentFiles.find(f => f.id === fileId);
+            document.getElementById('shareFileName').textContent = meta ? meta.name : '';
+            shareTab('link');
+            document.getElementById('shExpiry').value = '';
+            document.getElementById('shMaxDownloads').value = '';
+            document.getElementById('shPassword').value = '';
+            document.getElementById('shRecipient').value = '';
+            clearMsg('shLinkMsg');
+            clearMsg('shUserMsg');
+            document.getElementById('shLinkResult').classList.add('hidden');
+            document.getElementById('shareModal').classList.remove('hidden');
+            loadShares();
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('hidden');
+            shareFileId = null;
+        }
+
+        function shareTab(which) {
+            const isLink = which === 'link';
+            document.getElementById('shTabLink').classList.toggle('active', isLink);
+            document.getElementById('shTabUser').classList.toggle('active', !isLink);
+            document.getElementById('shLinkPane').classList.toggle('hidden', !isLink);
+            document.getElementById('shUserPane').classList.toggle('hidden', isLink);
+        }
+
+        async function createLink() {
+            clearMsg('shLinkMsg');
+            document.getElementById('shLinkResult').classList.add('hidden');
+
+            const body = { type: 'LINK' };
+            const expiry = document.getElementById('shExpiry').value;
+            if (expiry) body.expiresInMinutes = parseInt(expiry, 10);
+            const maxStr = document.getElementById('shMaxDownloads').value.trim();
+            if (maxStr) {
+                const max = parseInt(maxStr, 10);
+                if (isNaN(max) || max <= 0) return showMsg('shLinkMsg', 'Download limit must be a positive number.', false);
+                body.maxDownloads = max;
+            }
+            const pw = document.getElementById('shPassword').value;
+            if (pw) body.password = pw;
+
+            busy('shCreateBtn', true);
+            try {
+                const res = await fetch(API.files + '/' + shareFileId + '/shares', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { showMsg('shLinkMsg', 'Could not create link (' + res.status + ').', false); return; }
+                const share = await res.json();
+                const fullUrl = window.location.origin + share.url;
+                const input = document.getElementById('shLinkUrl');
+                input.value = fullUrl;
+                document.getElementById('shLinkResult').classList.remove('hidden');
+                toast('Share link created.');
+                loadShares();
+            } catch (e) {
+                showMsg('shLinkMsg', 'Network error. Please try again.', false);
+            } finally { busy('shCreateBtn', false); }
+        }
+
+        function copyLink() {
+            const input = document.getElementById('shLinkUrl');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => toast('Link copied.')).catch(() => {
+                document.execCommand('copy'); toast('Link copied.');
+            });
+        }
+
+        async function shareWithUser() {
+            clearMsg('shUserMsg');
+            const email = document.getElementById('shRecipient').value.trim();
+            if (!email) return showMsg('shUserMsg', 'Recipient email is required.', false);
+
+            busy('shUserBtn', true);
+            try {
+                const res = await fetch(API.files + '/' + shareFileId + '/shares', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'USER', recipientEmail: email })
+                });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 404) { showMsg('shUserMsg', 'No user with that email.', false); return; }
+                if (res.status === 409) { showMsg('shUserMsg', 'Already shared with this user.', false); return; }
+                if (res.status === 400) { const t = await res.text(); showMsg('shUserMsg', t || 'Invalid request.', false); return; }
+                if (!res.ok) { showMsg('shUserMsg', 'Could not share (' + res.status + ').', false); return; }
+                document.getElementById('shRecipient').value = '';
+                showMsg('shUserMsg', 'Shared with ' + email + '.', true);
+                toast('File shared.');
+                loadShares();
+            } catch (e) {
+                showMsg('shUserMsg', 'Network error. Please try again.', false);
+            } finally { busy('shUserBtn', false); }
+        }
+
+        async function loadShares() {
+            const list = document.getElementById('shareList');
+            list.innerHTML = '<div class="empty" style="padding:16px;"><span class="spinner"></span></div>';
+            try {
+                const res = await fetch(API.files + '/' + shareFileId + '/shares', { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { list.innerHTML = '<div class="muted" style="font-size:13px;">Could not load shares.</div>'; return; }
+
+                const shares = await res.json();
+                if (!shares.length) {
+                    list.innerHTML = '<div class="muted" style="font-size:13px;">No active shares for this file.</div>';
+                    return;
+                }
+                list.innerHTML = shares.map(s => {
+                    let title, meta;
+                    if (s.type === 'LINK') {
+                        title = window.location.origin + s.url;
+                        const bits = [];
+                        if (s.passwordProtected) bits.push('password');
+                        if (s.expiresAt) bits.push('expires ' + new Date(s.expiresAt).toLocaleString());
+                        if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' downloads');
+                        else bits.push(s.downloadCount + ' downloads');
+                        meta = bits.join(' · ');
+                    } else {
+                        title = escapeHtml(s.recipientEmail);
+                        meta = 'granted ' + new Date(s.createdAt).toLocaleDateString();
+                    }
+                    return `
+                        <div class="share-item">
+                            <div class="si-main">
+                                <div class="si-title"><span class="chip-type">${s.type === 'LINK' ? 'Link' : 'User'}</span>${title}</div>
+                                <div class="si-meta">${meta}</div>
+                            </div>
+                            <button class="link" onclick="revokeShare('${s.id}')">Revoke</button>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<div class="muted" style="font-size:13px;">Network error.</div>';
+            }
+        }
+
+        async function revokeShare(shareId) {
+            if (!confirm('Revoke this share? The recipient or link will stop working.')) return;
+            try {
+                const res = await fetch(API.files + '/shares/' + shareId, { method: 'DELETE', headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 204) { toast('Share revoked.'); loadShares(); }
+                else toast('Revoke failed.');
+            } catch (e) { toast('Revoke error.'); }
         }
 
         async function loadAllFiles() {
@@ -627,6 +954,7 @@
                                     <td class="muted">${new Date(f.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                                     <td class="col-actions">
                                         <button class="secondary sm" onclick="downloadFile('${f.id}')">Download</button>
+                                        <button class="secondary sm" onclick="openShareModal('${f.id}')">Share</button>
                                         <button class="link" onclick="deleteFile('${f.id}')">Delete</button>
                                     </td>
                                 </tr>
