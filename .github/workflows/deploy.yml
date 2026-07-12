@@ -4,6 +4,12 @@ on:
   push:
     branches: [ main ]
 
+# Only one deploy at a time: building on the small Oracle VM is slow, and two concurrent
+# on-box builds starve each other for RAM/CPU. Newer pushes supersede an in-flight deploy.
+concurrency:
+  group: deploy-oracle
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -14,6 +20,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # The on-box multi-stage Docker build (mvnw package) exceeds the action's
+          # default 10m command timeout on the resource-constrained VM.
+          command_timeout: 30m
           script: |
             set -e
             cd ~/secshare
