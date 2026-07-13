@@ -4,11 +4,12 @@ on:
   push:
     branches: [ main ]
 
-# Only one deploy at a time: building on the small Oracle VM is slow, and two concurrent
-# on-box builds starve each other for RAM/CPU. Newer pushes supersede an in-flight deploy.
+# Serialize deploys: the small Oracle VM can only handle one on-box build at a time, and a
+# build that is cancelled mid-flight keeps running on the box and starves the next one (which
+# then fails to even open an SSH session). Queue instead of cancel so builds never overlap.
 concurrency:
   group: deploy-oracle
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -25,6 +26,16 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
+            # The 1GB VM has no swap by default, so the on-box Maven/Docker build OOMs and
+            # wedges the box (SSH drops mid-build). Provision 2GB of swap once so the build
+            # has headroom; persist it in fstab so it survives reboots.
+            if ! sudo swapon --show | grep -q '/swapfile'; then
+              sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
             cd ~/secshare
             git fetch origin main
             git reset --hard origin/main
