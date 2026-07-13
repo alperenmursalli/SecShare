@@ -2,6 +2,7 @@ package org.example.secshare.file;
 
 import jakarta.persistence.*;
 import org.example.secshare.user.User;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -71,14 +72,22 @@ public class FileShare {
     @JoinColumn(name = "recipient_id")
     private User recipient;
 
+    /** The audience granted access, for {@link ShareType#AUDIENCE} shares; null otherwise. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "audience_id")
+    private Audience audience;
+
     /**
-     * Optional self-destruct policy for a USER grant (see {@link BurnMode}). Unused by LINK
-     * shares, which burn via {@link #burnAfterAccess} instead.
+     * Optional self-destruct policy for a USER or AUDIENCE grant (see {@link BurnMode}).
+     * Unused by LINK shares, which burn via {@link #burnAfterAccess} instead.
      */
-    // columnDefinition supplies a DB default so ddl-auto=update can add this NOT NULL column
-    // to an already-populated table without failing on existing rows.
+    // @ColumnDefault (not columnDefinition) supplies the DB default so ddl-auto=update can add
+    // this NOT NULL column to an already-populated table. An explicit length keeps the mapped
+    // type (varchar(16)) identical to the created column, so update mode never re-issues a
+    // (malformed) "alter column ... set data type" on subsequent starts.
     @Enumerated(EnumType.STRING)
-    @Column(name = "burn_mode", nullable = false, columnDefinition = "varchar(16) default 'NONE'")
+    @Column(name = "burn_mode", nullable = false, length = 16)
+    @ColumnDefault("'NONE'")
     private BurnMode burnMode = BurnMode.NONE;
 
     @Column(name = "revoked", nullable = false)
@@ -190,6 +199,14 @@ public class FileShare {
 
     public void setRecipient(User recipient) {
         this.recipient = recipient;
+    }
+
+    public Audience getAudience() {
+        return audience;
+    }
+
+    public void setAudience(Audience audience) {
+        this.audience = audience;
     }
 
     public BurnMode getBurnMode() {

@@ -2,6 +2,8 @@ package org.example.secshare.file;
 
 import org.example.secshare.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +27,15 @@ public interface FileShareRepository extends JpaRepository<FileShare, UUID> {
 
     /** Live burn-after-reading links — candidates the reaper inspects for expiry. */
     List<FileShare> findByBurnAfterAccessTrueAndRevokedFalse();
+
+    /** Ids of the audiences a file is actively shared to (used for the access check). */
+    @Query("select fs.audience.id from FileShare fs " +
+            "where fs.file.id = :fileId and fs.type = :type and fs.revoked = false")
+    List<UUID> findActiveAudienceIds(@Param("fileId") UUID fileId, @Param("type") ShareType type);
+
+    /** Active audience shares whose audience includes the given recipient email. */
+    @Query("select distinct fs from FileShare fs join fs.audience a " +
+            "where fs.type = :type and fs.revoked = false and exists " +
+            "(select 1 from AudienceMember m where m.audience = a and lower(m.email) = lower(:email))")
+    List<FileShare> findAudienceSharesForEmail(@Param("email") String email, @Param("type") ShareType type);
 }

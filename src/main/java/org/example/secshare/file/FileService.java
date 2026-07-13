@@ -36,6 +36,7 @@ public class FileService {
 
     private final SharedFileRepository sharedFileRepository;
     private final FileShareRepository fileShareRepository;
+    private final AudienceMemberRepository audienceMemberRepository;
     private final UserRepository userRepository;
     private final FileScanService fileScanService;
     private final Path baseStoragePath;
@@ -43,12 +44,14 @@ public class FileService {
     public FileService(
             SharedFileRepository sharedFileRepository,
             FileShareRepository fileShareRepository,
+            AudienceMemberRepository audienceMemberRepository,
             UserRepository userRepository,
             FileScanService fileScanService,
             @Value("${app.storage.base-path:/uploads}") String basePath
     ) {
         this.sharedFileRepository = sharedFileRepository;
         this.fileShareRepository = fileShareRepository;
+        this.audienceMemberRepository = audienceMemberRepository;
         this.userRepository = userRepository;
         this.fileScanService = fileScanService;
         this.baseStoragePath = Paths.get(basePath).toAbsolutePath().normalize();
@@ -173,18 +176,25 @@ public class FileService {
     }
 
     /**
-     * Download-level access: the owner, or a user the file has been granted to via an
-     * active USER share.
+     * Download-level access: the owner, a user the file has been granted to via an active
+     * USER share, or a member of an audience the file has been shared with.
      */
     public SharedFile getAccessibleFileOrThrow(UUID fileId, UserPrincipal principal) {
         SharedFile sharedFile = sharedFileRepository.findByIdAndDeletedFalse(fileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
 
         boolean isOwner = sharedFile.getOwner().getId().equals(principal.userId());
-        boolean isGranted = fileShareRepository
+        boolean isGranted = !isOwner && fileShareRepository
                 .existsByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId());
 
+        boolean isAudienceMember = false;
         if (!isOwner && !isGranted) {
+            List<UUID> audienceIds = fileShareRepository.findActiveAudienceIds(fileId, ShareType.AUDIENCE);
+            isAudienceMember = !audienceIds.isEmpty() && audienceMemberRepository
+                    .existsByAudience_IdInAndEmailIgnoreCase(audienceIds, principal.email());
+        }
+
+        if (!isOwner && !isGranted && !isAudienceMember) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this file");
         }
 

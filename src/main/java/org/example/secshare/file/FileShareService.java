@@ -15,7 +15,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,18 +33,27 @@ public class FileShareService {
     private final SecureRandom secureRandom = new SecureRandom();
     private final Base64.Encoder tokenEncoder = Base64.getUrlEncoder().withoutPadding();
 
+    /** Upper bound on recipients per audience — guards against pathological bulk requests. */
+    private static final int MAX_AUDIENCE_MEMBERS = 5000;
+
     private final FileShareRepository fileShareRepository;
+    private final AudienceRepository audienceRepository;
+    private final AudienceMemberRepository audienceMemberRepository;
     private final FileService fileService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     public FileShareService(
             FileShareRepository fileShareRepository,
+            AudienceRepository audienceRepository,
+            AudienceMemberRepository audienceMemberRepository,
             FileService fileService,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.fileShareRepository = fileShareRepository;
+        this.audienceRepository = audienceRepository;
+        this.audienceMemberRepository = audienceMemberRepository;
         this.fileService = fileService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -65,10 +76,10 @@ public class FileShareService {
         share.setType(type);
         share.setCreatedAt(Instant.now());
 
-        if (type == ShareType.LINK) {
-            configureLink(share, req);
-        } else {
-            configureUserGrant(share, file, req);
+        switch (type) {
+            case LINK -> configureLink(share, req);
+            case USER -> configureUserGrant(share, file, req);
+            case AUDIENCE -> configureAudience(share, owner, req);
         }
 
         fileShareRepository.save(share);
@@ -119,6 +130,63 @@ public class FileShareService {
         share.setBurnMode(parseBurnMode(req.burnMode()));
     }
 
+    /**
+     * Configures an AUDIENCE grant: builds (or would reuse) a named email list and attaches it
+     * to the share. Emails are normalised (trimmed, lower-cased, de-duplicated) and persisted
+     * in one batch so a single share can reach thousands of recipients cheaply.
+     */
+    private void configureAudience(FileShare share, User owner, CreateShareRequest req) {
+        if (req.recipientEmails() == null || req.recipientEmails().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one recipient email is required");
+        }
+
+        LinkedHashSet<String> emails = new LinkedHashSet<>();
+        for (String raw : req.recipientEmails()) {
+            if (raw == null) continue;
+            String email = raw.trim().toLowerCase();
+            if (email.isEmpty()) continue;
+            if (!email.contains("@") || email.length() > 254) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email address: " + raw.trim());
+            }
+            emails.add(email);
+        }
+        if (emails.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one valid recipient email is required");
+        }
+        if (emails.size() > MAX_AUDIENCE_MEMBERS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Too many recipients (max " + MAX_AUDIENCE_MEMBERS + ")");
+        }
+
+        Audience audience = new Audience();
+        audience.setId(UUID.randomUUID());
+        audience.setOwner(owner);
+        audience.setName(req.name() != null && !req.name().isBlank()
+                ? req.name().trim()
+                : emails.size() + " recipients");
+        audience.setCreatedAt(Instant.now());
+        audienceRepository.save(audience);
+
+        List<AudienceMember> members = emails.stream().map(email -> {
+            AudienceMember m = new AudienceMember();
+            m.setId(UUID.randomUUID());
+            m.setAudience(audience);
+            m.setEmail(email);
+            return m;
+        }).toList();
+        audienceMemberRepository.saveAll(members);
+
+        share.setAudience(audience);
+        share.setBurnMode(parseBurnMode(req.burnMode()));
+
+        if (req.expiresInMinutes() != null) {
+            if (req.expiresInMinutes() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expiry must be positive");
+            }
+            share.setExpiresAt(Instant.now().plus(req.expiresInMinutes(), ChronoUnit.MINUTES));
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<ShareResponse> listSharesForFile(UUID fileId, UserPrincipal principal) {
         SharedFile file = fileService.getOwnedFileOrThrow(fileId, principal);
@@ -141,16 +209,27 @@ public class FileShareService {
         fileShareRepository.save(share);
     }
 
-    /** Files granted to the current user via active USER shares. */
+    /** Files granted to the current user via active USER grants or AUDIENCE membership. */
     @Transactional(readOnly = true)
     public List<ShareResponse> listSharedWithMe(UserPrincipal principal) {
         User me = requireUser(principal.userId());
-        return fileShareRepository
+
+        List<ShareResponse> result = new ArrayList<>();
+        fileShareRepository
                 .findByRecipientAndTypeAndRevokedFalseOrderByCreatedAtDesc(me, ShareType.USER)
                 .stream()
                 .filter(s -> !s.getFile().isDeleted())
                 .map(this::toResponse)
-                .toList();
+                .forEach(result::add);
+
+        fileShareRepository
+                .findAudienceSharesForEmail(principal.email(), ShareType.AUDIENCE)
+                .stream()
+                .filter(s -> s.isActive() && !s.getFile().isDeleted())
+                .map(this::toResponse)
+                .forEach(result::add);
+
+        return result;
     }
 
     // ---------------------------------------------------------------------
@@ -294,6 +373,14 @@ public class FileShareService {
 
     private ShareResponse toResponse(FileShare share) {
         String url = share.getType() == ShareType.LINK ? "/share.html?t=" + share.getToken() : null;
+
+        String audienceName = null;
+        Integer recipientCount = null;
+        if (share.getAudience() != null) {
+            audienceName = share.getAudience().getName();
+            recipientCount = (int) audienceMemberRepository.countByAudience_Id(share.getAudience().getId());
+        }
+
         return new ShareResponse(
                 share.getId(),
                 share.getType().name(),
@@ -301,6 +388,8 @@ public class FileShareService {
                 share.getFile().getOriginalFilename(),
                 url,
                 share.getRecipient() != null ? share.getRecipient().getEmail() : null,
+                audienceName,
+                recipientCount,
                 share.hasPassword(),
                 share.getExpiresAt(),
                 share.getMaxDownloads(),

@@ -135,12 +135,13 @@
         .auth-body { padding: 26px 24px; }
         .field { margin-bottom: 16px; }
         label { display: block; font-size: 13px; font-weight: 550; color: var(--text-muted); margin-bottom: 6px; }
-        input[type=email], input[type=password], input[type=text] {
+        input[type=email], input[type=password], input[type=text], textarea {
             width: 100%; padding: 10px 12px; font-size: 14px;
             border: 1px solid var(--border-strong); border-radius: 6px;
             background: var(--surface); color: var(--text);
         }
-        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        textarea { font-family: inherit; resize: vertical; line-height: 1.5; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
         /* Dashboard */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
@@ -472,6 +473,7 @@
                 <div class="tabs" style="margin-bottom:20px;">
                     <div class="tab active" id="shTabLink" onclick="shareTab('link')">Share link</div>
                     <div class="tab" id="shTabUser" onclick="shareTab('user')">Share with a user</div>
+                    <div class="tab" id="shTabGroup" onclick="shareTab('group')">Share with a group</div>
                 </div>
 
                 <!-- Link pane -->
@@ -497,7 +499,7 @@
                     </div>
                     <label class="check-row" for="shBurn">
                         <input type="checkbox" id="shBurn">
-                        <span>Burn when the download limit is reached <span class="muted">the file is permanently destroyed once every allowed download has been used. With no limit set, it is destroyed after the first download.</span></span>
+                        <span>Burn after the download limit <span class="muted">file is destroyed once its downloads run out.</span></span>
                     </label>
                     <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
                     <div id="shLinkMsg" class="msg"></div>
@@ -524,6 +526,22 @@
                     </div>
                     <button class="full" id="shUserBtn" onclick="shareWithUser()">Share with user</button>
                     <div id="shUserMsg" class="msg"></div>
+                </div>
+
+                <!-- Group pane -->
+                <div id="shGroupPane" class="hidden">
+                    <div class="field">
+                        <label>Group name <span class="muted">(optional)</span></label>
+                        <input type="text" id="shGroupName" placeholder="e.g. Marketing team" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label>Recipient emails</label>
+                        <textarea id="shGroupEmails" rows="5"
+                                  placeholder="Paste emails, one per line or comma-separated"></textarea>
+                        <span class="muted" style="font-size:12px;">Everyone on this list can download the file once they sign in with that address.</span>
+                    </div>
+                    <button class="full" id="shGroupBtn" onclick="shareWithGroup()">Share with group</button>
+                    <div id="shGroupMsg" class="msg"></div>
                 </div>
 
                 <div class="share-existing">
@@ -780,8 +798,11 @@
             document.getElementById('shBurn').checked = false;
             document.getElementById('shRecipient').value = '';
             document.getElementById('shBurnMode').value = 'NONE';
+            document.getElementById('shGroupName').value = '';
+            document.getElementById('shGroupEmails').value = '';
             clearMsg('shLinkMsg');
             clearMsg('shUserMsg');
+            clearMsg('shGroupMsg');
             document.getElementById('shLinkResult').classList.add('hidden');
             document.getElementById('shareModal').classList.remove('hidden');
             loadShares();
@@ -793,11 +814,12 @@
         }
 
         function shareTab(which) {
-            const isLink = which === 'link';
-            document.getElementById('shTabLink').classList.toggle('active', isLink);
-            document.getElementById('shTabUser').classList.toggle('active', !isLink);
-            document.getElementById('shLinkPane').classList.toggle('hidden', !isLink);
-            document.getElementById('shUserPane').classList.toggle('hidden', isLink);
+            document.getElementById('shTabLink').classList.toggle('active', which === 'link');
+            document.getElementById('shTabUser').classList.toggle('active', which === 'user');
+            document.getElementById('shTabGroup').classList.toggle('active', which === 'group');
+            document.getElementById('shLinkPane').classList.toggle('hidden', which !== 'link');
+            document.getElementById('shUserPane').classList.toggle('hidden', which !== 'user');
+            document.getElementById('shGroupPane').classList.toggle('hidden', which !== 'group');
         }
 
         async function createLink() {
@@ -873,6 +895,33 @@
             } finally { busy('shUserBtn', false); }
         }
 
+        async function shareWithGroup() {
+            clearMsg('shGroupMsg');
+            const raw = document.getElementById('shGroupEmails').value;
+            const emails = raw.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+            if (!emails.length) return showMsg('shGroupMsg', 'Enter at least one recipient email.', false);
+            const name = document.getElementById('shGroupName').value.trim();
+
+            busy('shGroupBtn', true);
+            try {
+                const res = await fetch(API.files + '/' + shareFileId + '/shares', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name })
+                });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 400) { const t = await res.text(); showMsg('shGroupMsg', t || 'Invalid request.', false); return; }
+                if (!res.ok) { showMsg('shGroupMsg', 'Could not share (' + res.status + ').', false); return; }
+                document.getElementById('shGroupEmails').value = '';
+                document.getElementById('shGroupName').value = '';
+                showMsg('shGroupMsg', 'Shared with ' + emails.length + ' recipient' + (emails.length === 1 ? '' : 's') + '.', true);
+                toast('File shared with group.');
+                loadShares();
+            } catch (e) {
+                showMsg('shGroupMsg', 'Network error. Please try again.', false);
+            } finally { busy('shGroupBtn', false); }
+        }
+
         async function loadShares() {
             const list = document.getElementById('shareList');
             list.innerHTML = '<div class="empty" style="padding:16px;"><span class="spinner"></span></div>';
@@ -887,8 +936,9 @@
                     return;
                 }
                 list.innerHTML = shares.map(s => {
-                    let title, meta;
+                    let title, meta, typeLabel;
                     if (s.type === 'LINK') {
+                        typeLabel = 'Link';
                         title = window.location.origin + s.url;
                         const bits = [];
                         if (s.burnAfterAccess) bits.push(s.maxDownloads != null ? 'destroyed after ' + s.maxDownloads + ' downloads' : 'destroyed after one download');
@@ -897,19 +947,27 @@
                         if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' downloads');
                         else if (!s.burnAfterAccess) bits.push(s.downloadCount + ' downloads');
                         meta = bits.join(' · ');
+                    } else if (s.type === 'AUDIENCE') {
+                        typeLabel = 'Group';
+                        title = escapeHtml(s.audienceName || 'Group');
+                        const gbits = [(s.recipientCount != null ? s.recipientCount : 0) + ' recipient' + (s.recipientCount === 1 ? '' : 's')];
+                        if (s.expiresAt) gbits.push('expires ' + new Date(s.expiresAt).toLocaleString());
+                        gbits.push('shared ' + new Date(s.createdAt).toLocaleDateString());
+                        meta = gbits.join(' · ');
                     } else {
+                        typeLabel = 'User';
                         title = escapeHtml(s.recipientEmail);
                         const gbits = ['granted ' + new Date(s.createdAt).toLocaleDateString()];
                         if (s.burnMode === 'FIRST') gbits.push('destroyed after first open');
                         else if (s.burnMode === 'ALL') gbits.push('destroyed after all recipients open');
                         meta = gbits.join(' · ');
                     }
-                    const burns = s.burnAfterAccess || (s.burnMode && s.burnMode !== 'NONE');
+                    const burns = s.burnAfterAccess || (s.type !== 'AUDIENCE' && s.burnMode && s.burnMode !== 'NONE');
                     const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
-                                <div class="si-title"><span class="chip-type">${s.type === 'LINK' ? 'Link' : 'User'}</span>${burnChip}${title}</div>
+                                <div class="si-title"><span class="chip-type">${typeLabel}</span>${burnChip}${title}</div>
                                 <div class="si-meta">${meta}</div>
                             </div>
                             <button class="link" onclick="revokeShare('${s.id}')">Revoke</button>

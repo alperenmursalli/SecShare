@@ -14,6 +14,8 @@ public record ShareResponse(
         String fileName,
         String url,
         String recipientEmail,
+        String audienceName,
+        Integer recipientCount,
         boolean passwordProtected,
         Instant expiresAt,
         Integer maxDownloads,
