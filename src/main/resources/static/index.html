@@ -502,6 +502,10 @@
                         <input type="checkbox" id="shBurn">
                         <span>Burn after the download limit <span class="muted">file is destroyed once its downloads run out.</span></span>
                     </label>
+                    <label class="check-row" for="shNotify">
+                        <input type="checkbox" id="shNotify">
+                        <span>Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
+                    </label>
                     <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
                     <div id="shLinkMsg" class="msg"></div>
                     <div class="copy-box hidden" id="shLinkResult">
@@ -525,6 +529,10 @@
                             <option value="ALL">Destroy after every recipient has opened it</option>
                         </select>
                     </div>
+                    <label class="check-row" for="shUserNotify">
+                        <input type="checkbox" id="shUserNotify">
+                        <span>Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
+                    </label>
                     <button class="full" id="shUserBtn" onclick="shareWithUser()">Share with user</button>
                     <div id="shUserMsg" class="msg"></div>
                 </div>
@@ -560,6 +568,11 @@
                 <div class="share-existing">
                     <h3>Active shares</h3>
                     <div id="shareList"></div>
+                </div>
+
+                <div class="share-existing">
+                    <h3>Recent downloads</h3>
+                    <div id="downloadList"></div>
                 </div>
             </div>
         </div>
@@ -814,8 +827,10 @@
             document.getElementById('shMaxDownloads').value = '';
             document.getElementById('shPassword').value = '';
             document.getElementById('shBurn').checked = false;
+            document.getElementById('shNotify').checked = false;
             document.getElementById('shRecipient').value = '';
             document.getElementById('shBurnMode').value = 'NONE';
+            document.getElementById('shUserNotify').checked = false;
             document.getElementById('shGroupName').value = '';
             document.getElementById('shGroupEmails').value = '';
             document.getElementById('shGroupBurn').value = 'NONE';
@@ -827,6 +842,7 @@
             document.getElementById('shLinkResult').classList.add('hidden');
             document.getElementById('shareModal').classList.remove('hidden');
             loadShares();
+            loadDownloads(fileId);
         }
 
         function closeShareModal() {
@@ -859,6 +875,7 @@
             const pw = document.getElementById('shPassword').value;
             if (pw) body.password = pw;
             if (document.getElementById('shBurn').checked) body.burnAfterAccess = true;
+            if (document.getElementById('shNotify').checked) body.notifyOnDownload = true;
 
             busy('shCreateBtn', true);
             try {
@@ -894,13 +911,14 @@
             const email = document.getElementById('shRecipient').value.trim();
             if (!email) return showMsg('shUserMsg', 'Recipient email is required.', false);
             const burnMode = document.getElementById('shBurnMode').value;
+            const notifyOnDownload = document.getElementById('shUserNotify').checked;
 
             busy('shUserBtn', true);
             try {
                 const res = await fetch(API.files + '/' + shareFileId + '/shares', {
                     method: 'POST',
                     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'USER', recipientEmail: email, burnMode })
+                    body: JSON.stringify({ type: 'USER', recipientEmail: email, burnMode, notifyOnDownload })
                 });
                 if (res.status === 401) { logout(); return; }
                 if (res.status === 404) { showMsg('shUserMsg', 'No user with that email.', false); return; }
@@ -1012,15 +1030,47 @@
                     }
                     const burns = s.burnAfterAccess || (s.burnMode && s.burnMode !== 'NONE');
                     const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
+                    const notifyChip = s.notifyOnDownload ? '<span class="chip-type">Notify</span>' : '';
                     const exportBtn = s.type === 'AUDIENCE'
                         ? `<button class="link" onclick="exportAudienceLinks('${s.id}')">Export links</button>` : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
-                                <div class="si-title"><span class="chip-type">${typeLabel}</span>${burnChip}${title}</div>
+                                <div class="si-title"><span class="chip-type">${typeLabel}</span>${burnChip}${notifyChip}${title}</div>
                                 <div class="si-meta">${meta}</div>
                             </div>
                             <div class="si-actions">${exportBtn}<button class="link" onclick="revokeShare('${s.id}')">Revoke</button></div>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<div class="muted" style="font-size:13px;">Network error.</div>';
+            }
+        }
+
+        async function loadDownloads(fileId) {
+            const list = document.getElementById('downloadList');
+            list.innerHTML = '<div class="empty" style="padding:12px;"><span class="spinner"></span></div>';
+            try {
+                const res = await fetch(API.files + '/' + fileId + '/downloads', { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (!res.ok) { list.innerHTML = '<div class="muted" style="font-size:13px;">Could not load download history.</div>'; return; }
+                const events = await res.json();
+                if (!events.length) {
+                    list.innerHTML = '<div class="muted" style="font-size:13px;">No downloads yet.</div>';
+                    return;
+                }
+                const label = { LINK: 'Link', USER: 'User', AUDIENCE: 'Group' };
+                list.innerHTML = events.map(e => {
+                    const who = e.downloaderEmail ? escapeHtml(e.downloaderEmail) : 'Anonymous link';
+                    const bits = [new Date(e.downloadedAt).toLocaleString()];
+                    if (e.ipAddress) bits.push('IP ' + escapeHtml(e.ipAddress));
+                    const burnedTag = e.burned ? '<span class="chip-burn">Burned</span>' : '';
+                    return `
+                        <div class="share-item">
+                            <div class="si-main">
+                                <div class="si-title"><span class="chip-type">${label[e.source] || e.source}</span>${burnedTag}${who}</div>
+                                <div class="si-meta">${bits.join(' · ')}</div>
+                            </div>
                         </div>`;
                 }).join('');
             } catch (e) {

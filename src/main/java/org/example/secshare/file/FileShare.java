@@ -67,6 +67,11 @@ public class FileShare {
     @Column(name = "burn_after_access", nullable = false, columnDefinition = "boolean default false")
     private boolean burnAfterAccess = false;
 
+    /** When true, the owner is emailed each time this share is downloaded (opt-in). */
+    @Column(name = "notify_on_download", nullable = false)
+    @ColumnDefault("false")
+    private boolean notifyOnDownload = false;
+
     // --- USER grant fields ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
@@ -191,6 +196,14 @@ public class FileShare {
 
     public void setBurnAfterAccess(boolean burnAfterAccess) {
         this.burnAfterAccess = burnAfterAccess;
+    }
+
+    public boolean isNotifyOnDownload() {
+        return notifyOnDownload;
+    }
+
+    public void setNotifyOnDownload(boolean notifyOnDownload) {
+        this.notifyOnDownload = notifyOnDownload;
     }
 
     public User getRecipient() {

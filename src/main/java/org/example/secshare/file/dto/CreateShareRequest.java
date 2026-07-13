@@ -21,6 +21,7 @@ public record CreateShareRequest(
         Integer maxDownloads,
         Boolean burnAfterAccess,
         String burnMode,
-        Boolean emailLinks
+        Boolean emailLinks,
+        Boolean notifyOnDownload
 ) {
 }

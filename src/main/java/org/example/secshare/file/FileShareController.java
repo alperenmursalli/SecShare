@@ -3,6 +3,7 @@ package org.example.secshare.file;
 import org.example.secshare.auth.security.UserPrincipal;
 import org.example.secshare.file.dto.AudienceMemberResponse;
 import org.example.secshare.file.dto.CreateShareRequest;
+import org.example.secshare.file.dto.DownloadAuditResponse;
 import org.example.secshare.file.dto.ShareResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,9 +21,11 @@ import java.util.UUID;
 public class FileShareController {
 
     private final FileShareService fileShareService;
+    private final DownloadAuditService downloadAuditService;
 
-    public FileShareController(FileShareService fileShareService) {
+    public FileShareController(FileShareService fileShareService, DownloadAuditService downloadAuditService) {
         this.fileShareService = fileShareService;
+        this.downloadAuditService = downloadAuditService;
     }
 
     @PostMapping("/{id}/shares")
@@ -49,6 +52,14 @@ public class FileShareController {
     ) {
         fileShareService.revokeShare(shareId, user);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/downloads")
+    public List<DownloadAuditResponse> downloadHistory(
+            @PathVariable("id") UUID fileId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        return downloadAuditService.listForFile(fileId, user);
     }
 
     @GetMapping("/shares/{shareId}/members")

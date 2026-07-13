@@ -45,6 +45,7 @@ public class FileShareService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailOutboxService emailOutboxService;
+    private final DownloadAuditService downloadAuditService;
 
     public FileShareService(
             FileShareRepository fileShareRepository,
@@ -53,7 +54,8 @@ public class FileShareService {
             FileService fileService,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            EmailOutboxService emailOutboxService
+            EmailOutboxService emailOutboxService,
+            DownloadAuditService downloadAuditService
     ) {
         this.fileShareRepository = fileShareRepository;
         this.audienceRepository = audienceRepository;
@@ -62,6 +64,7 @@ public class FileShareService {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailOutboxService = emailOutboxService;
+        this.downloadAuditService = downloadAuditService;
     }
 
     // ---------------------------------------------------------------------
@@ -113,6 +116,7 @@ public class FileShareService {
         }
 
         share.setBurnAfterAccess(Boolean.TRUE.equals(req.burnAfterAccess()));
+        share.setNotifyOnDownload(Boolean.TRUE.equals(req.notifyOnDownload()));
     }
 
     private void configureUserGrant(FileShare share, SharedFile file, CreateShareRequest req) {
@@ -133,6 +137,7 @@ public class FileShareService {
 
         share.setRecipient(recipient);
         share.setBurnMode(parseBurnMode(req.burnMode()));
+        share.setNotifyOnDownload(Boolean.TRUE.equals(req.notifyOnDownload()));
     }
 
     /**
@@ -330,6 +335,7 @@ public class FileShareService {
         }
 
         boolean burnNow = recordAudienceOpenAndMaybeBurn(member, share);
+        downloadAuditService.record(share.getFile(), share, DownloadSource.AUDIENCE, member.getEmail(), burnNow);
         return new LinkDownload(share.getFile(), burnNow);
     }
 
@@ -416,6 +422,7 @@ public class FileShareService {
             share.setRevoked(true); // spent: the link can never resolve again
         }
         fileShareRepository.save(share);
+        downloadAuditService.record(share.getFile(), share, DownloadSource.LINK, null, burnNow);
         return new LinkDownload(share.getFile(), burnNow);
     }
 
@@ -444,7 +451,7 @@ public class FileShareService {
         if (userShare != null && userShare.getType() == ShareType.USER) {
             userShare.setDownloadCount(userShare.getDownloadCount() + 1);
             fileShareRepository.save(userShare);
-            burn = switch (userShare.getBurnMode()) {
+            boolean userBurn = switch (userShare.getBurnMode()) {
                 case FIRST -> true;
                 case ALL -> fileShareRepository
                         .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.USER)
@@ -452,6 +459,8 @@ public class FileShareService {
                         .allMatch(g -> g.getDownloadCount() > 0);
                 case NONE -> false;
             };
+            downloadAuditService.record(userShare.getFile(), userShare, DownloadSource.USER, principal.email(), userBurn);
+            burn = userBurn;
         }
 
         // A registered user may also reach the file as an audience member (by email).
@@ -459,8 +468,12 @@ public class FileShareService {
             AudienceMember member = audienceMemberRepository
                     .findByAudience_IdAndEmailIgnoreCase(audienceShare.getAudience().getId(), principal.email())
                     .orElse(null);
-            if (member != null && recordAudienceOpenAndMaybeBurn(member, audienceShare)) {
-                burn = true;
+            if (member != null) {
+                boolean audienceBurn = recordAudienceOpenAndMaybeBurn(member, audienceShare);
+                downloadAuditService.record(audienceShare.getFile(), audienceShare, DownloadSource.AUDIENCE, principal.email(), audienceBurn);
+                if (audienceBurn) {
+                    burn = true;
+                }
             }
         }
         return burn;
@@ -528,6 +541,7 @@ public class FileShareService {
                 share.getDownloadCount(),
                 share.isBurnAfterAccess(),
                 share.getBurnMode().name(),
+                share.isNotifyOnDownload(),
                 share.isRevoked(),
                 share.isActive(),
                 share.getCreatedAt()
