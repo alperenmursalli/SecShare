@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecShare — Secure File Sharing</title>
+    <title>SecShare</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
         :root {
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --accent-soft: #eef2ff;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --accent-soft: #f1ecfe;
             --bg: #f7f8fa;
             --surface: #ffffff;
             --surface-2: #f4f6f8;
@@ -26,9 +27,9 @@
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --accent: #6690ff;
-                --accent-hover: #7c9dff;
-                --accent-soft: #1a2135;
+                --accent: #a78bfa;
+                --accent-hover: #c4b5fd;
+                --accent-soft: #241b3a;
                 --bg: #0e1015;
                 --surface: #161922;
                 --surface-2: #1c2029;
@@ -271,6 +272,29 @@
             font-size: 11px; font-weight: 600; color: #0a7c42; margin-left: 6px; vertical-align: 1px;
         }
         @media (prefers-color-scheme: dark) { .scan-badge { color: #4ade80; } }
+
+        /* Upload / scan progress */
+        .upload-progress {
+            display: none; align-items: center; gap: 11px;
+            margin-top: 14px; padding: 11px 14px;
+            background: var(--accent-soft); border: 1px solid var(--border);
+            border-radius: var(--radius); font-size: 14px; font-weight: 550; color: var(--text);
+        }
+        .upload-progress.show { display: flex; }
+        .upload-progress.done { background: var(--success-bg); border-color: transparent; }
+        .upload-progress.failed { background: var(--danger-bg); border-color: transparent; }
+        .up-spinner {
+            width: 17px; height: 17px; flex: none; border-radius: 50%;
+            border: 2.5px solid var(--border-strong); border-top-color: var(--accent);
+            animation: up-spin .7s linear infinite;
+        }
+        @keyframes up-spin { to { transform: rotate(360deg); } }
+        .up-mark { width: 18px; flex: none; text-align: center; font-weight: 800; font-size: 15px; }
+        .upload-progress.done .up-mark { color: var(--success); }
+        .upload-progress.failed .up-mark { color: var(--danger); }
+        .up-text { transition: opacity .2s ease; }
+        @keyframes up-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+        .upload-progress:not(.done):not(.failed) .up-text { animation: up-pulse 1.3s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -396,6 +420,11 @@
                 <div class="upload-row">
                     <button id="uploadBtn" onclick="uploadFile()" disabled>Upload</button>
                     <button class="secondary" id="clearBtn" onclick="clearSelection()" disabled>Clear</button>
+                </div>
+                <div class="upload-progress" id="uploadProgress">
+                    <span class="up-spinner" id="upSpinner"></span>
+                    <span class="up-mark hidden" id="upMark"></span>
+                    <span class="up-text" id="upText"></span>
                 </div>
                 <div id="uploadMsg" class="msg"></div>
             </div>
@@ -1024,6 +1053,25 @@
             clearMsg('uploadMsg');
         }
 
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function upStage(text) {
+            const prog = document.getElementById('uploadProgress');
+            prog.className = 'upload-progress show';
+            document.getElementById('upSpinner').classList.remove('hidden');
+            document.getElementById('upMark').classList.add('hidden');
+            document.getElementById('upText').textContent = text;
+        }
+        function upResult(state, mark, text) {
+            const prog = document.getElementById('uploadProgress');
+            prog.className = 'upload-progress show ' + state;
+            document.getElementById('upSpinner').classList.add('hidden');
+            const m = document.getElementById('upMark');
+            m.textContent = mark; m.classList.remove('hidden');
+            document.getElementById('upText').textContent = text;
+        }
+        function upHide() { document.getElementById('uploadProgress').className = 'upload-progress'; }
+
         async function uploadFile() {
             if (!selectedFile) return;
             if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
@@ -1031,24 +1079,47 @@
             const formData = new FormData();
             formData.append('file', selectedFile);
             busy('uploadBtn', true);
+            clearMsg('uploadMsg');
+
+            // Staged animation runs alongside the single upload+scan request. The stages are
+            // paced so the "scanning" step is always visible even when the server is fast.
+            const started = Date.now();
+            upStage('Uploading file…');
+            const toScan = setTimeout(() => upStage('Scanning for malware…'), 650);
+
             try {
                 const res = await fetch(API.upload, { method: 'POST', headers: authHeaders(), body: formData });
+                clearTimeout(toScan);
                 if (res.status === 401) { logout(); return; }
+
+                // Keep the scanning stage on screen briefly so the animation reads clearly.
+                upStage('Scanning for malware…');
+                const elapsed = Date.now() - started;
+                if (elapsed < 1200) await sleep(1200 - elapsed);
+
                 if (res.ok) {
+                    upResult('done', '✓', 'Clean');
                     clearSelection();
                     toast('File uploaded.');
                     await loadFiles();
+                    await sleep(1400);
+                    upHide();
                 } else if (res.status === 422) {
-                    showMsg('uploadMsg', 'Upload blocked: this file failed the malware scan and was rejected.', false);
+                    upResult('failed', '✕', 'Malware detected. Upload blocked.');
                 } else if (res.status === 400) {
+                    upHide();
                     showMsg('uploadMsg', 'Upload rejected: file type not allowed or file is empty.', false);
                 } else if (res.status === 413) {
+                    upHide();
                     showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
                 } else {
+                    upHide();
                     const err = await res.text();
                     showMsg('uploadMsg', 'Upload failed: ' + (err || res.status), false);
                 }
             } catch (e) {
+                clearTimeout(toScan);
+                upHide();
                 showMsg('uploadMsg', 'Network error. Please try again.', false);
             } finally { busy('uploadBtn', false); }
         }
