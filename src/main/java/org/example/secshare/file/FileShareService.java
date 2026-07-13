@@ -31,7 +31,7 @@ import java.util.UUID;
 @Service
 public class FileShareService {
 
-    private static final int TOKEN_BYTES = 24; // ~32 url-safe chars
+    private static final int TOKEN_BYTES = 12; // 16 url-safe chars, 96-bit entropy
     private final SecureRandom secureRandom = new SecureRandom();
     private final Base64.Encoder tokenEncoder = Base64.getUrlEncoder().withoutPadding();
 
@@ -204,7 +204,7 @@ public class FileShareService {
         String owner = share.getCreatedBy().getEmail();
         String subject = "A file has been shared with you on SecShare";
         for (AudienceMember member : members) {
-            String link = emailOutboxService.publicBaseUrl() + "/share.html?t=" + member.getToken();
+            String link = emailOutboxService.publicBaseUrl() + "/s/" + member.getToken();
             String body = "Hello,\n\n"
                     + owner + " shared the file \"" + fileName + "\" with you on SecShare.\n\n"
                     + "Download it here (no account needed):\n" + link + "\n\n"
@@ -252,7 +252,7 @@ public class FileShareService {
                 .stream()
                 .map(m -> new AudienceMemberResponse(
                         m.getEmail(),
-                        m.getToken() != null ? "/share.html?t=" + m.getToken() : null,
+                        m.getToken() != null ? "/s/" + m.getToken() : null,
                         m.getOpenedAt(),
                         m.getDownloadCount()))
                 .toList();
@@ -504,7 +504,7 @@ public class FileShareService {
     }
 
     private ShareResponse toResponse(FileShare share) {
-        String url = share.getType() == ShareType.LINK ? "/share.html?t=" + share.getToken() : null;
+        String url = share.getType() == ShareType.LINK ? "/s/" + share.getToken() : null;
 
         String audienceName = null;
         Integer recipientCount = null;

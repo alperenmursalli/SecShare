@@ -122,7 +122,10 @@
     </div>
 
     <script>
-        const token = new URLSearchParams(window.location.search).get('t');
+        const _p = window.location.pathname;
+        const token = _p.startsWith('/s/')
+            ? decodeURIComponent(_p.slice(3))
+            : new URLSearchParams(window.location.search).get('t');
         let needsPassword = false;
 
         function formatSize(bytes) {

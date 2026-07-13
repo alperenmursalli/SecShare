@@ -35,6 +35,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/info").permitAll()
                     .requestMatchers("/api/public/shares/**").permitAll()
                     .requestMatchers("/", "/index.html", "/guide.html", "/share.html").permitAll()
+                    .requestMatchers("/s/**").permitAll()
                     .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/files.html").permitAll()
