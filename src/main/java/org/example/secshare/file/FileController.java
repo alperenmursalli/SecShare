@@ -19,9 +19,11 @@ import java.util.UUID;
 public class FileController {
 
     private final FileService fileService;
+    private final FileShareService fileShareService;
 
-    public FileController(FileService fileService) {
+    public FileController(FileService fileService, FileShareService fileShareService) {
         this.fileService = fileService;
+        this.fileShareService = fileShareService;
     }
 
     @PostMapping("/upload")
@@ -46,7 +48,17 @@ public class FileController {
             @AuthenticationPrincipal UserPrincipal user
     ) {
         SharedFile file = fileService.getAccessibleFileOrThrow(id, user);
-        Resource resource = fileService.loadResource(file);
+
+        // A USER grant may carry a self-destruct policy: capture the bytes, then destroy the
+        // file before responding when this recipient's open exhausts it.
+        final Resource resource;
+        if (fileShareService.recordUserAccessAndMaybeBurn(id, user)) {
+            byte[] content = fileService.readAllBytes(file);
+            fileService.purge(file);
+            resource = fileService.asResource(content);
+        } else {
+            resource = fileService.loadResource(file);
+        }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.getContentType()))

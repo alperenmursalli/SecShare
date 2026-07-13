@@ -116,6 +116,7 @@ public class FileShareService {
         }
 
         share.setRecipient(recipient);
+        share.setBurnMode(parseBurnMode(req.burnMode()));
     }
 
     @Transactional(readOnly = true)
@@ -176,9 +177,11 @@ public class FileShareService {
      * Validates a share link (revocation, expiry, download limit, password) and, on
      * success, increments the download counter and returns the file to serve.
      *
-     * <p>For a burn-after-reading link, the share is revoked in the same transaction so the
-     * token can never resolve again; the caller is then responsible for destroying the
-     * file's bytes (see {@link LinkDownload#burn()}). Note: revocation here is best-effort
+     * <p>For a burn link, the file's bytes are destroyed once every allowed download has
+     * been spent (or after the first download when no limit is set). On that final download
+     * the share is revoked in the same transaction so the token can never resolve again; the
+     * caller is then responsible for destroying the file's bytes (see
+     * {@link LinkDownload#burn()}). Note: revocation here is best-effort
      * against races — two simultaneous requests could both pass the {@code revokedFalse}
      * lookup before either commits. A pessimistic lock would close that window entirely.</p>
      */
@@ -204,11 +207,52 @@ public class FileShareService {
         }
 
         share.setDownloadCount(share.getDownloadCount() + 1);
-        if (share.isBurnAfterAccess()) {
-            share.setRevoked(true); // one-time: the link is spent the moment it is read
+
+        // Burn is coupled to the download limit: the file is destroyed only once every
+        // allowed download has been spent. With no limit set, a single download exhausts it.
+        boolean burnNow = share.isBurnAfterAccess()
+                && (share.getMaxDownloads() == null || share.isDownloadLimitReached());
+        if (burnNow) {
+            share.setRevoked(true); // spent: the link can never resolve again
         }
         fileShareRepository.save(share);
-        return new LinkDownload(share.getFile(), share.isBurnAfterAccess());
+        return new LinkDownload(share.getFile(), burnNow);
+    }
+
+    // ---------------------------------------------------------------------
+    // Authenticated (USER grant) download
+    // ---------------------------------------------------------------------
+
+    /**
+     * Records that the current principal opened a file granted to them and decides whether
+     * that open triggers the grant's {@link BurnMode self-destruct policy}. Returns
+     * {@code true} when the caller must destroy the file's bytes after serving them.
+     *
+     * <p>Only recipient opens count: the owner downloading their own file never burns it,
+     * and grants with {@link BurnMode#NONE} never burn. {@link BurnMode#FIRST} burns on the
+     * first recipient open; {@link BurnMode#ALL} burns only once every active recipient of
+     * the file has opened it at least once.</p>
+     */
+    @Transactional
+    public boolean recordUserAccessAndMaybeBurn(UUID fileId, UserPrincipal principal) {
+        FileShare share = fileShareRepository
+                .findByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId())
+                .orElse(null);
+        if (share == null || share.getType() != ShareType.USER) {
+            return false; // owner (or no active grant): nothing to record, never burns
+        }
+
+        share.setDownloadCount(share.getDownloadCount() + 1);
+        fileShareRepository.save(share);
+
+        return switch (share.getBurnMode()) {
+            case FIRST -> true;
+            case ALL -> fileShareRepository
+                    .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.USER)
+                    .stream()
+                    .allMatch(g -> g.getDownloadCount() > 0);
+            case NONE -> false;
+        };
     }
 
     // ---------------------------------------------------------------------
@@ -223,6 +267,17 @@ public class FileShareService {
             return ShareType.valueOf(raw.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid share type");
+        }
+    }
+
+    private BurnMode parseBurnMode(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return BurnMode.NONE;
+        }
+        try {
+            return BurnMode.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid burn mode");
         }
     }
 
@@ -251,6 +306,7 @@ public class FileShareService {
                 share.getMaxDownloads(),
                 share.getDownloadCount(),
                 share.isBurnAfterAccess(),
+                share.getBurnMode().name(),
                 share.isRevoked(),
                 share.isActive(),
                 share.getCreatedAt()

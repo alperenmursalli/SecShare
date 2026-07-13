@@ -56,19 +56,30 @@ public class FileShare {
     private int downloadCount = 0;
 
     /**
-     * When true, this is an ephemeral "burn-after-reading" link: the underlying file is
-     * irreversibly destroyed as soon as it is downloaded once (or when the link expires
-     * unread, via the scheduled reaper).
+     * When true, this is an ephemeral "burn" link: the underlying file is irreversibly
+     * destroyed once every allowed download has been spent, i.e. when {@link #maxDownloads}
+     * is reached (or after the first download when no limit is set), or when the link
+     * expires unread, via the scheduled reaper.
      */
     // columnDefinition supplies a DB default so ddl-auto=update can add this NOT NULL column
     // to an already-populated table without failing on existing rows.
     @Column(name = "burn_after_access", nullable = false, columnDefinition = "boolean default false")
     private boolean burnAfterAccess = false;
 
-    // --- USER grant field ---
+    // --- USER grant fields ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
     private User recipient;
+
+    /**
+     * Optional self-destruct policy for a USER grant (see {@link BurnMode}). Unused by LINK
+     * shares, which burn via {@link #burnAfterAccess} instead.
+     */
+    // columnDefinition supplies a DB default so ddl-auto=update can add this NOT NULL column
+    // to an already-populated table without failing on existing rows.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "burn_mode", nullable = false, columnDefinition = "varchar(16) default 'NONE'")
+    private BurnMode burnMode = BurnMode.NONE;
 
     @Column(name = "revoked", nullable = false)
     private boolean revoked = false;
@@ -179,6 +190,14 @@ public class FileShare {
 
     public void setRecipient(User recipient) {
         this.recipient = recipient;
+    }
+
+    public BurnMode getBurnMode() {
+        return burnMode;
+    }
+
+    public void setBurnMode(BurnMode burnMode) {
+        this.burnMode = burnMode;
     }
 
     public boolean isRevoked() {

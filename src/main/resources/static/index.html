@@ -468,7 +468,7 @@
                     </div>
                     <label class="check-row" for="shBurn">
                         <input type="checkbox" id="shBurn">
-                        <span>🔥 Burn after reading <span class="muted">— the file is permanently destroyed after one download</span></span>
+                        <span>Burn when the download limit is reached <span class="muted">the file is permanently destroyed once every allowed download has been used. With no limit set, it is destroyed after the first download.</span></span>
                     </label>
                     <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
                     <div id="shLinkMsg" class="msg"></div>
@@ -484,6 +484,14 @@
                         <label>Recipient email</label>
                         <input type="email" id="shRecipient" placeholder="user@example.com" autocomplete="off"
                                onkeydown="if(event.key==='Enter') shareWithUser()">
+                    </div>
+                    <div class="field">
+                        <label>Self-destruct <span class="muted">(optional)</span></label>
+                        <select id="shBurnMode">
+                            <option value="NONE">Do not auto-destroy</option>
+                            <option value="FIRST">Destroy after the first recipient opens it</option>
+                            <option value="ALL">Destroy after every recipient has opened it</option>
+                        </select>
                     </div>
                     <button class="full" id="shUserBtn" onclick="shareWithUser()">Share with user</button>
                     <div id="shUserMsg" class="msg"></div>
@@ -742,6 +750,7 @@
             document.getElementById('shPassword').value = '';
             document.getElementById('shBurn').checked = false;
             document.getElementById('shRecipient').value = '';
+            document.getElementById('shBurnMode').value = 'NONE';
             clearMsg('shLinkMsg');
             clearMsg('shUserMsg');
             document.getElementById('shLinkResult').classList.add('hidden');
@@ -812,13 +821,14 @@
             clearMsg('shUserMsg');
             const email = document.getElementById('shRecipient').value.trim();
             if (!email) return showMsg('shUserMsg', 'Recipient email is required.', false);
+            const burnMode = document.getElementById('shBurnMode').value;
 
             busy('shUserBtn', true);
             try {
                 const res = await fetch(API.files + '/' + shareFileId + '/shares', {
                     method: 'POST',
                     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'USER', recipientEmail: email })
+                    body: JSON.stringify({ type: 'USER', recipientEmail: email, burnMode })
                 });
                 if (res.status === 401) { logout(); return; }
                 if (res.status === 404) { showMsg('shUserMsg', 'No user with that email.', false); return; }
@@ -852,7 +862,7 @@
                     if (s.type === 'LINK') {
                         title = window.location.origin + s.url;
                         const bits = [];
-                        if (s.burnAfterAccess) bits.push('destroyed after one download');
+                        if (s.burnAfterAccess) bits.push(s.maxDownloads != null ? 'destroyed after ' + s.maxDownloads + ' downloads' : 'destroyed after one download');
                         if (s.passwordProtected) bits.push('password');
                         if (s.expiresAt) bits.push('expires ' + new Date(s.expiresAt).toLocaleString());
                         if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' downloads');
@@ -860,9 +870,13 @@
                         meta = bits.join(' · ');
                     } else {
                         title = escapeHtml(s.recipientEmail);
-                        meta = 'granted ' + new Date(s.createdAt).toLocaleDateString();
+                        const gbits = ['granted ' + new Date(s.createdAt).toLocaleDateString()];
+                        if (s.burnMode === 'FIRST') gbits.push('destroyed after first open');
+                        else if (s.burnMode === 'ALL') gbits.push('destroyed after all recipients open');
+                        meta = gbits.join(' · ');
                     }
-                    const burnChip = s.burnAfterAccess ? '<span class="chip-burn">🔥 Burn</span>' : '';
+                    const burns = s.burnAfterAccess || (s.burnMode && s.burnMode !== 'NONE');
+                    const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">

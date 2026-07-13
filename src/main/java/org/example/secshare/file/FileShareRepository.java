@@ -19,6 +19,10 @@ public interface FileShareRepository extends JpaRepository<FileShare, UUID> {
 
     boolean existsByFile_IdAndRecipient_IdAndRevokedFalse(UUID fileId, UUID recipientId);
 
+    Optional<FileShare> findByFile_IdAndRecipient_IdAndRevokedFalse(UUID fileId, UUID recipientId);
+
+    List<FileShare> findByFile_IdAndTypeAndRevokedFalse(UUID fileId, ShareType type);
+
     /** Live burn-after-reading links — candidates the reaper inspects for expiry. */
     List<FileShare> findByBurnAfterAccessTrueAndRevokedFalse();
 }
