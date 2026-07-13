@@ -30,6 +30,17 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       STORAGE_PATH: /app/uploads
       PORT: "8080"
+      # Email delivery (optional). Off unless MAIL_ENABLED=true in .env.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-true}
+      # Absolute base URL used to build links inside emails, e.g. https://your-domain
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     volumes:
       - uploads:/app/uploads
     ports:
