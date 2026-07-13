@@ -5,6 +5,7 @@ import org.example.secshare.file.dto.AudienceMemberResponse;
 import org.example.secshare.file.dto.CreateShareRequest;
 import org.example.secshare.file.dto.PublicShareMetaResponse;
 import org.example.secshare.file.dto.ShareResponse;
+import org.example.secshare.mail.EmailOutboxService;
 import org.example.secshare.user.User;
 import org.example.secshare.user.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,7 @@ public class FileShareService {
     private final FileService fileService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailOutboxService emailOutboxService;
 
     public FileShareService(
             FileShareRepository fileShareRepository,
@@ -50,7 +52,8 @@ public class FileShareService {
             AudienceMemberRepository audienceMemberRepository,
             FileService fileService,
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            EmailOutboxService emailOutboxService
     ) {
         this.fileShareRepository = fileShareRepository;
         this.audienceRepository = audienceRepository;
@@ -58,6 +61,7 @@ public class FileShareService {
         this.fileService = fileService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailOutboxService = emailOutboxService;
     }
 
     // ---------------------------------------------------------------------
@@ -187,6 +191,25 @@ public class FileShareService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expiry must be positive");
             }
             share.setExpiresAt(Instant.now().plus(req.expiresInMinutes(), ChronoUnit.MINUTES));
+        }
+
+        if (Boolean.TRUE.equals(req.emailLinks()) && emailOutboxService.isConfigured()) {
+            enqueueAudienceEmails(share, members);
+        }
+    }
+
+    /** Queues one email per recipient with their personal, account-less download link. */
+    private void enqueueAudienceEmails(FileShare share, List<AudienceMember> members) {
+        String fileName = share.getFile().getOriginalFilename();
+        String owner = share.getCreatedBy().getEmail();
+        String subject = "A file has been shared with you on SecShare";
+        for (AudienceMember member : members) {
+            String link = emailOutboxService.publicBaseUrl() + "/share.html?t=" + member.getToken();
+            String body = "Hello,\n\n"
+                    + owner + " shared the file \"" + fileName + "\" with you on SecShare.\n\n"
+                    + "Download it here (no account needed):\n" + link + "\n\n"
+                    + "This is an automated message; please do not reply.";
+            emailOutboxService.enqueue(member.getEmail(), subject, body);
         }
     }
 

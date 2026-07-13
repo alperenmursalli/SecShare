@@ -549,6 +549,10 @@
                             <option value="ALL">Destroy after every recipient has opened it</option>
                         </select>
                     </div>
+                    <label class="check-row hidden" id="shGroupEmailRow" for="shGroupEmail">
+                        <input type="checkbox" id="shGroupEmail">
+                        <span>Email a personal download link to each recipient <span class="muted">sent in the background; no account needed to open.</span></span>
+                    </label>
                     <button class="full" id="shGroupBtn" onclick="shareWithGroup()">Share with group</button>
                     <div id="shGroupMsg" class="msg"></div>
                 </div>
@@ -576,6 +580,11 @@
         let selectedFile = null;
         let currentFiles = [];
         let isAdmin = false;
+        let mailEnabled = false;
+
+        fetch('/api/info').then(r => r.ok ? r.json() : null).then(info => {
+            mailEnabled = !!(info && info.mailEnabled);
+        }).catch(() => {});
 
         function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
 
@@ -810,6 +819,8 @@
             document.getElementById('shGroupName').value = '';
             document.getElementById('shGroupEmails').value = '';
             document.getElementById('shGroupBurn').value = 'NONE';
+            document.getElementById('shGroupEmail').checked = false;
+            document.getElementById('shGroupEmailRow').classList.toggle('hidden', !mailEnabled);
             clearMsg('shLinkMsg');
             clearMsg('shUserMsg');
             clearMsg('shGroupMsg');
@@ -912,20 +923,22 @@
             if (!emails.length) return showMsg('shGroupMsg', 'Enter at least one recipient email.', false);
             const name = document.getElementById('shGroupName').value.trim();
             const burnMode = document.getElementById('shGroupBurn').value;
+            const emailLinks = document.getElementById('shGroupEmail').checked;
 
             busy('shGroupBtn', true);
             try {
                 const res = await fetch(API.files + '/' + shareFileId + '/shares', {
                     method: 'POST',
                     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name, burnMode })
+                    body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name, burnMode, emailLinks })
                 });
                 if (res.status === 401) { logout(); return; }
                 if (res.status === 400) { const t = await res.text(); showMsg('shGroupMsg', t || 'Invalid request.', false); return; }
                 if (!res.ok) { showMsg('shGroupMsg', 'Could not share (' + res.status + ').', false); return; }
                 document.getElementById('shGroupEmails').value = '';
                 document.getElementById('shGroupName').value = '';
-                showMsg('shGroupMsg', 'Shared with ' + emails.length + ' recipient' + (emails.length === 1 ? '' : 's') + '.', true);
+                const emailNote = (emailLinks && mailEnabled) ? ' Emailing personal links now.' : '';
+                showMsg('shGroupMsg', 'Shared with ' + emails.length + ' recipient' + (emails.length === 1 ? '' : 's') + '.' + emailNote, true);
                 toast('File shared with group.');
                 loadShares();
             } catch (e) {

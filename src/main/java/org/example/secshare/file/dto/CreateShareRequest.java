@@ -20,6 +20,7 @@ public record CreateShareRequest(
         Long expiresInMinutes,
         Integer maxDownloads,
         Boolean burnAfterAccess,
-        String burnMode
+        String burnMode,
+        Boolean emailLinks
 ) {
 }

@@ -1,5 +1,6 @@
 package org.example.secshare;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,11 +16,15 @@ import java.util.Map;
 @RequestMapping("/api/info")
 public class InfoController {
 
+    @Value("${app.mail.enabled:false}")
+    private boolean mailEnabled;
+
     @GetMapping
     public Map<String, Object> info() {
         return Map.of(
                 "name", "SecShare",
                 "version", "1.0.0",
+                "mailEnabled", mailEnabled,
                 "description", "SecShare is a self-hosted, authenticated file-sharing service. "
                         + "Users register an account, sign in to receive a JWT, and then upload, "
                         + "list, download and delete their own files over a REST API. Files are "
