@@ -49,10 +49,10 @@ public class FileController {
     ) {
         SharedFile file = fileService.getAccessibleFileOrThrow(id, user);
 
-        // A USER grant may carry a self-destruct policy: capture the bytes, then destroy the
-        // file before responding when this recipient's open exhausts it.
+        // A USER grant or AUDIENCE membership may carry a self-destruct policy: capture the
+        // bytes, then destroy the file before responding when this recipient's open exhausts it.
         final Resource resource;
-        if (fileShareService.recordUserAccessAndMaybeBurn(id, user)) {
+        if (fileShareService.recordAuthenticatedAccessAndMaybeBurn(id, user)) {
             byte[] content = fileService.readAllBytes(file);
             fileService.purge(file);
             resource = fileService.asResource(content);

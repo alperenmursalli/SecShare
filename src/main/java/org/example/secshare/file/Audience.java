@@ -2,6 +2,7 @@ package org.example.secshare.file;
 
 import jakarta.persistence.*;
 import org.example.secshare.user.User;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,6 +30,16 @@ public class Audience {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /** Total recipients, captured at creation so ALL-mode burn needs no per-row count. */
+    @Column(name = "member_count", nullable = false)
+    @ColumnDefault("0")
+    private int memberCount = 0;
+
+    /** Distinct members who have opened the file at least once (drives ALL-mode burn). */
+    @Column(name = "opened_count", nullable = false)
+    @ColumnDefault("0")
+    private int openedCount = 0;
 
     public UUID getId() {
         return id;
@@ -60,5 +71,21 @@ public class Audience {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public int getMemberCount() {
+        return memberCount;
+    }
+
+    public void setMemberCount(int memberCount) {
+        this.memberCount = memberCount;
+    }
+
+    public int getOpenedCount() {
+        return openedCount;
+    }
+
+    public void setOpenedCount(int openedCount) {
+        this.openedCount = openedCount;
     }
 }

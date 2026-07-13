@@ -16,5 +16,7 @@ public interface AudienceMemberRepository extends JpaRepository<AudienceMember, 
 
     Optional<AudienceMember> findByToken(String token);
 
+    Optional<AudienceMember> findByAudience_IdAndEmailIgnoreCase(UUID audienceId, String email);
+
     List<AudienceMember> findByAudience_IdOrderByEmailAsc(UUID audienceId);
 }

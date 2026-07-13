@@ -166,6 +166,7 @@ public class FileShareService {
                 ? req.name().trim()
                 : emails.size() + " recipients");
         audience.setCreatedAt(Instant.now());
+        audience.setMemberCount(emails.size());
         audienceRepository.save(audience);
 
         List<AudienceMember> members = emails.stream().map(email -> {
@@ -305,12 +306,44 @@ public class FileShareService {
             throw new ResponseStatusException(HttpStatus.GONE, "This file is no longer available");
         }
 
+        boolean burnNow = recordAudienceOpenAndMaybeBurn(member, share);
+        return new LinkDownload(share.getFile(), burnNow);
+    }
+
+    /**
+     * Records a member opening an audience share and applies its {@link BurnMode}. Uses the
+     * audience's {@code openedCount}/{@code memberCount} counters so ALL-mode never scans the
+     * member rows. Returns true when this open destroys the file (caller must purge the bytes).
+     */
+    private boolean recordAudienceOpenAndMaybeBurn(AudienceMember member, FileShare share) {
+        boolean firstOpenForMember = member.getOpenedAt() == null;
         member.setDownloadCount(member.getDownloadCount() + 1);
-        if (member.getOpenedAt() == null) {
+        if (firstOpenForMember) {
             member.setOpenedAt(Instant.now());
         }
         audienceMemberRepository.save(member);
-        return new LinkDownload(share.getFile(), false);
+
+        BurnMode mode = share.getBurnMode();
+        if (mode == BurnMode.NONE) {
+            return false;
+        }
+        if (mode == BurnMode.FIRST) {
+            share.setRevoked(true);
+            fileShareRepository.save(share);
+            return true;
+        }
+        // ALL: burn once every distinct member has opened at least once.
+        Audience audience = share.getAudience();
+        if (firstOpenForMember) {
+            audience.setOpenedCount(audience.getOpenedCount() + 1);
+            audienceRepository.save(audience);
+        }
+        if (audience.getMemberCount() > 0 && audience.getOpenedCount() >= audience.getMemberCount()) {
+            share.setRevoked(true);
+            fileShareRepository.save(share);
+            return true;
+        }
+        return false;
     }
 
     private java.util.Optional<FileShare> activeAudienceShare(Audience audience) {
@@ -364,39 +397,50 @@ public class FileShareService {
     }
 
     // ---------------------------------------------------------------------
-    // Authenticated (USER grant) download
+    // Authenticated (USER grant / AUDIENCE membership) download
     // ---------------------------------------------------------------------
 
     /**
-     * Records that the current principal opened a file granted to them and decides whether
-     * that open triggers the grant's {@link BurnMode self-destruct policy}. Returns
-     * {@code true} when the caller must destroy the file's bytes after serving them.
+     * Records that the current principal opened a file granted to them (as a USER recipient
+     * and/or an AUDIENCE member) and decides whether that open triggers a {@link BurnMode
+     * self-destruct policy}. Returns {@code true} when the caller must destroy the file's
+     * bytes after serving them.
      *
-     * <p>Only recipient opens count: the owner downloading their own file never burns it,
-     * and grants with {@link BurnMode#NONE} never burn. {@link BurnMode#FIRST} burns on the
-     * first recipient open; {@link BurnMode#ALL} burns only once every active recipient of
-     * the file has opened it at least once.</p>
+     * <p>Only recipient opens count: the owner downloading their own file never burns it, and
+     * grants with {@link BurnMode#NONE} never burn. {@link BurnMode#FIRST} burns on the first
+     * recipient open; {@link BurnMode#ALL} burns only once every active recipient has opened
+     * it at least once.</p>
      */
     @Transactional
-    public boolean recordUserAccessAndMaybeBurn(UUID fileId, UserPrincipal principal) {
-        FileShare share = fileShareRepository
+    public boolean recordAuthenticatedAccessAndMaybeBurn(UUID fileId, UserPrincipal principal) {
+        boolean burn = false;
+
+        FileShare userShare = fileShareRepository
                 .findByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId())
                 .orElse(null);
-        if (share == null || share.getType() != ShareType.USER) {
-            return false; // owner (or no active grant): nothing to record, never burns
+        if (userShare != null && userShare.getType() == ShareType.USER) {
+            userShare.setDownloadCount(userShare.getDownloadCount() + 1);
+            fileShareRepository.save(userShare);
+            burn = switch (userShare.getBurnMode()) {
+                case FIRST -> true;
+                case ALL -> fileShareRepository
+                        .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.USER)
+                        .stream()
+                        .allMatch(g -> g.getDownloadCount() > 0);
+                case NONE -> false;
+            };
         }
 
-        share.setDownloadCount(share.getDownloadCount() + 1);
-        fileShareRepository.save(share);
-
-        return switch (share.getBurnMode()) {
-            case FIRST -> true;
-            case ALL -> fileShareRepository
-                    .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.USER)
-                    .stream()
-                    .allMatch(g -> g.getDownloadCount() > 0);
-            case NONE -> false;
-        };
+        // A registered user may also reach the file as an audience member (by email).
+        for (FileShare audienceShare : fileShareRepository.findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.AUDIENCE)) {
+            AudienceMember member = audienceMemberRepository
+                    .findByAudience_IdAndEmailIgnoreCase(audienceShare.getAudience().getId(), principal.email())
+                    .orElse(null);
+            if (member != null && recordAudienceOpenAndMaybeBurn(member, audienceShare)) {
+                burn = true;
+            }
+        }
+        return burn;
     }
 
     // ---------------------------------------------------------------------

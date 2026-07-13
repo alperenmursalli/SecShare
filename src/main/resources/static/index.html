@@ -541,6 +541,14 @@
                                   placeholder="Paste emails, one per line or comma-separated"></textarea>
                         <span class="muted" style="font-size:12px;">Registered recipients see the file after signing in. For everyone else, use Export links to share a personal download link that needs no account.</span>
                     </div>
+                    <div class="field">
+                        <label>Self-destruct <span class="muted">(optional)</span></label>
+                        <select id="shGroupBurn">
+                            <option value="NONE">Do not auto-destroy</option>
+                            <option value="FIRST">Destroy after the first recipient opens it</option>
+                            <option value="ALL">Destroy after every recipient has opened it</option>
+                        </select>
+                    </div>
                     <button class="full" id="shGroupBtn" onclick="shareWithGroup()">Share with group</button>
                     <div id="shGroupMsg" class="msg"></div>
                 </div>
@@ -801,6 +809,7 @@
             document.getElementById('shBurnMode').value = 'NONE';
             document.getElementById('shGroupName').value = '';
             document.getElementById('shGroupEmails').value = '';
+            document.getElementById('shGroupBurn').value = 'NONE';
             clearMsg('shLinkMsg');
             clearMsg('shUserMsg');
             clearMsg('shGroupMsg');
@@ -902,13 +911,14 @@
             const emails = raw.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
             if (!emails.length) return showMsg('shGroupMsg', 'Enter at least one recipient email.', false);
             const name = document.getElementById('shGroupName').value.trim();
+            const burnMode = document.getElementById('shGroupBurn').value;
 
             busy('shGroupBtn', true);
             try {
                 const res = await fetch(API.files + '/' + shareFileId + '/shares', {
                     method: 'POST',
                     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name })
+                    body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name, burnMode })
                 });
                 if (res.status === 401) { logout(); return; }
                 if (res.status === 400) { const t = await res.text(); showMsg('shGroupMsg', t || 'Invalid request.', false); return; }
@@ -974,6 +984,8 @@
                         typeLabel = 'Group';
                         title = escapeHtml(s.audienceName || 'Group');
                         const gbits = [(s.recipientCount != null ? s.recipientCount : 0) + ' recipient' + (s.recipientCount === 1 ? '' : 's')];
+                        if (s.burnMode === 'FIRST') gbits.push('destroyed after first open');
+                        else if (s.burnMode === 'ALL') gbits.push('destroyed after all open');
                         if (s.expiresAt) gbits.push('expires ' + new Date(s.expiresAt).toLocaleString());
                         gbits.push('shared ' + new Date(s.createdAt).toLocaleDateString());
                         meta = gbits.join(' · ');
@@ -985,7 +997,7 @@
                         else if (s.burnMode === 'ALL') gbits.push('destroyed after all recipients open');
                         meta = gbits.join(' · ');
                     }
-                    const burns = s.burnAfterAccess || (s.type !== 'AUDIENCE' && s.burnMode && s.burnMode !== 'NONE');
+                    const burns = s.burnAfterAccess || (s.burnMode && s.burnMode !== 'NONE');
                     const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
                     const exportBtn = s.type === 'AUDIENCE'
                         ? `<button class="link" onclick="exportAudienceLinks('${s.id}')">Export links</button>` : '';
