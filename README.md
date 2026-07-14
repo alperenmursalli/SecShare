@@ -126,6 +126,36 @@ docker-compose down
 
 ---
 
+## Testing
+
+End-to-end tests live under `src/test/java/org/example/secshare/e2e`. They boot the **real
+application** on a random port against a throwaway **PostgreSQL** container
+([Testcontainers](https://testcontainers.com)) and drive the same HTTP stack a browser hits —
+JWT security, JPA, and on-disk file storage. Covered journeys include register → login → `/me`,
+upload → create share link → anonymous public download, password-protected links, and
+burn-after-reading self-destruct.
+
+### Requirements
+
+- A running **Docker** engine (the tests start a Postgres container automatically).
+
+### Run
+
+```bash
+./mvnw test
+```
+
+To run only the E2E suite:
+
+```bash
+./mvnw -Dtest='org.example.secshare.e2e.*E2ETest' test
+```
+
+> Docker Engine 25+ requires API version 1.44+. The Maven Surefire config pins the Testcontainers
+> client to `api.version=1.44` so tests connect to the socket on modern Docker versions.
+
+---
+
 ## Authentication
 
 SecureShare uses JWT authentication for protecting API endpoints.
