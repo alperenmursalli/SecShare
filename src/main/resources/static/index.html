@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecShare</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="/i18n.js"></script>
     <style>
         :root {
             --accent: #7c3aed;
@@ -73,6 +74,11 @@
         .header-nav { display: flex; align-items: center; gap: 20px; font-size: 14px; }
         .header-nav a.navlink { color: var(--text-muted); font-weight: 500; }
         .header-nav a.navlink:hover { color: var(--text); text-decoration: none; }
+        .lang-toggle {
+            background: none; color: var(--text-muted); border: 1px solid var(--border-strong);
+            padding: 5px 11px; font-size: 12px; font-weight: 650; border-radius: 5px; letter-spacing: .03em;
+        }
+        .lang-toggle:hover { background: var(--surface-2); color: var(--text); }
         .user-chip { display: flex; align-items: center; gap: 10px; }
         .avatar {
             width: 30px; height: 30px; border-radius: 50%;
@@ -310,11 +316,12 @@
                 SecShare
             </div>
             <nav class="header-nav">
-                <a class="navlink" href="/guide.html">Documentation</a>
+                <a class="navlink" href="/guide.html" data-i18n="navDocs">Documentation</a>
+                <button class="lang-toggle" data-lang-toggle onclick="I18N.toggle()">TR</button>
                 <div id="userChip" class="user-chip hidden">
                     <div class="avatar" id="navAvatar">U</div>
                     <span class="user-email" id="navEmail"></span>
-                    <button class="secondary sm" onclick="logout()">Sign out</button>
+                    <button class="secondary sm" onclick="logout()" data-i18n="navSignOut">Sign out</button>
                 </div>
             </nav>
         </div>
@@ -325,56 +332,56 @@
         <section id="landing">
             <div class="landing-grid">
                 <div class="lede">
-                    <h1>Private, authenticated file sharing you can host yourself.</h1>
-                    <p class="sub">SecShare gives every user a secure, personal space to upload and manage files over a clean REST API. Your files stay yours. Access is protected by JWT authentication.</p>
+                    <h1 data-i18n="heroTitle">Private, authenticated file sharing you can host yourself.</h1>
+                    <p class="sub" data-i18n="heroSub">SecShare gives every user a secure, personal space to upload and manage files over a clean REST API. Your files stay yours. Access is protected by JWT authentication.</p>
                     <ul class="points">
                         <li>
                             <span class="ck">&#10003;</span>
-                            <span><strong>Per-user isolation.</strong> <span class="d">You can only see, download, and delete your own files.</span></span>
+                            <span><strong data-i18n="point1Title">Per-user isolation.</strong> <span class="d" data-i18n="point1Desc">You can only see, download, and delete your own files.</span></span>
                         </li>
                         <li>
                             <span class="ck">&#10003;</span>
-                            <span><strong>Token-based access.</strong> <span class="d">Sign in once and every request is authorized with a JWT.</span></span>
+                            <span><strong data-i18n="point2Title">Token-based access.</strong> <span class="d" data-i18n="point2Desc">Sign in once and every request is authorized with a JWT.</span></span>
                         </li>
                         <li>
                             <span class="ck">&#10003;</span>
-                            <span><strong>Broad format support.</strong> <span class="d">PDF, images, text, Office documents and ZIP archives up to 50&nbsp;MB.</span></span>
+                            <span><strong data-i18n="point3Title">Broad format support.</strong> <span class="d" data-i18n-html="point3Desc">PDF, images, text, Office documents and ZIP archives up to 50&nbsp;MB.</span></span>
                         </li>
                     </ul>
-                    <p class="doc-hint">New here? Read the <a href="/guide.html">usage guide</a> to learn how it works.</p>
+                    <p class="doc-hint" data-i18n-html="docHint">New here? Read the <a href="/guide.html">usage guide</a> to learn how it works.</p>
                 </div>
 
                 <div class="card auth">
                     <div class="tabs">
-                        <div class="tab active" id="tabLogin" onclick="switchTab('login')">Sign in</div>
-                        <div class="tab" id="tabRegister" onclick="switchTab('register')">Create account</div>
+                        <div class="tab active" id="tabLogin" onclick="switchTab('login')" data-i18n="tabSignIn">Sign in</div>
+                        <div class="tab" id="tabRegister" onclick="switchTab('register')" data-i18n="tabCreate">Create account</div>
                     </div>
 
                     <div class="auth-body" id="loginForm">
                         <div class="field">
-                            <label>Email</label>
+                            <label data-i18n="labelEmail">Email</label>
                             <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
                         </div>
                         <div class="field">
-                            <label>Password</label>
-                            <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password"
+                            <label data-i18n="labelPassword">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Your password" data-i18n-ph="phPassword" autocomplete="current-password"
                                    onkeydown="if(event.key==='Enter') login()">
                         </div>
-                        <button class="full" id="loginBtn" onclick="login()">Sign in</button>
+                        <button class="full" id="loginBtn" onclick="login()" data-i18n="tabSignIn">Sign in</button>
                         <div id="loginMsg" class="msg"></div>
                     </div>
 
                     <div class="auth-body hidden" id="registerForm">
                         <div class="field">
-                            <label>Email</label>
+                            <label data-i18n="labelEmail">Email</label>
                             <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email">
                         </div>
                         <div class="field">
-                            <label>Password <span class="muted">(at least 8 characters)</span></label>
-                            <input type="password" id="regPassword" placeholder="Choose a strong password" autocomplete="new-password"
+                            <label data-i18n-html="labelPasswordHint">Password <span class="muted">(at least 8 characters)</span></label>
+                            <input type="password" id="regPassword" placeholder="Choose a strong password" data-i18n-ph="phChoosePassword" autocomplete="new-password"
                                    onkeydown="if(event.key==='Enter') register()">
                         </div>
-                        <button class="full" id="regBtn" onclick="register()">Create account</button>
+                        <button class="full" id="regBtn" onclick="register()" data-i18n="tabCreate">Create account</button>
                         <div id="regMsg" class="msg"></div>
                     </div>
                 </div>
@@ -385,27 +392,27 @@
         <section id="dashboard" class="hidden">
             <div class="stats">
                 <div class="stat">
-                    <div class="k">Files</div>
+                    <div class="k" data-i18n="statFiles">Files</div>
                     <div class="v" id="statCount">0</div>
                 </div>
                 <div class="stat">
-                    <div class="k">Storage used</div>
+                    <div class="k" data-i18n="statStorage">Storage used</div>
                     <div class="v" id="statSize">0 <small>B</small></div>
                 </div>
                 <div class="stat">
-                    <div class="k">Role</div>
+                    <div class="k" data-i18n="statRole">Role</div>
                     <div class="v"><span class="badge" id="statRole">USER</span></div>
                 </div>
                 <div class="stat">
-                    <div class="k">Member since</div>
+                    <div class="k" data-i18n="statSince">Member since</div>
                     <div class="v" id="statSince" style="font-size:16px;">&mdash;</div>
                 </div>
             </div>
 
             <div class="card panel">
                 <div class="panel-head">
-                    <h2>Upload a file</h2>
-                    <span class="muted" style="font-size:13px;">Max 50 MB</span>
+                    <h2 data-i18n="uploadTitle">Upload a file</h2>
+                    <span class="muted" style="font-size:13px;" data-i18n="max50">Max 50 MB</span>
                 </div>
                 <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
                     <div class="icn">
@@ -414,14 +421,14 @@
                             <path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
                         </svg>
                     </div>
-                    <div>Drag a file here, or <strong>click to browse</strong></div>
-                    <div class="muted" style="font-size:13px; margin-top:6px;">PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP · scanned for malware on upload</div>
+                    <div data-i18n-html="dropText">Drag a file here, or <strong>click to browse</strong></div>
+                    <div class="muted" style="font-size:13px; margin-top:6px;" data-i18n="dropTypes">PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP · scanned for malware on upload</div>
                     <div class="fname hidden" id="chosenName"></div>
                 </div>
                 <input type="file" id="fileInput" class="hidden">
                 <div class="upload-row">
-                    <button id="uploadBtn" onclick="uploadFile()" disabled>Upload</button>
-                    <button class="secondary" id="clearBtn" onclick="clearSelection()" disabled>Clear</button>
+                    <button id="uploadBtn" onclick="uploadFile()" disabled data-i18n="btnUpload">Upload</button>
+                    <button class="secondary" id="clearBtn" onclick="clearSelection()" disabled data-i18n="btnClear">Clear</button>
                 </div>
                 <div class="upload-progress" id="uploadProgress">
                     <span class="up-spinner" id="upSpinner"></span>
@@ -433,26 +440,26 @@
 
             <div class="card panel">
                 <div class="panel-head">
-                    <h2>Your files</h2>
-                    <button class="secondary sm" onclick="loadFiles()">Refresh</button>
+                    <h2 data-i18n="yourFiles">Your files</h2>
+                    <button class="secondary sm" onclick="loadFiles()" data-i18n="btnRefresh">Refresh</button>
                 </div>
                 <div id="fileList"></div>
             </div>
 
             <div class="card panel" id="sharedPanel">
                 <div class="panel-head">
-                    <h2>Shared with me</h2>
-                    <button class="secondary sm" onclick="loadSharedWithMe()">Refresh</button>
+                    <h2 data-i18n="sharedWithMe">Shared with me</h2>
+                    <button class="secondary sm" onclick="loadSharedWithMe()" data-i18n="btnRefresh">Refresh</button>
                 </div>
                 <div id="sharedList"></div>
             </div>
 
             <div class="card panel hidden" id="adminPanel">
                 <div class="panel-head">
-                    <h2>All files <span class="badge">Admin</span></h2>
-                    <button class="secondary sm" onclick="loadAllFiles()">Refresh</button>
+                    <h2 data-i18n-html="allFiles">All files <span class="badge">Admin</span></h2>
+                    <button class="secondary sm" onclick="loadAllFiles()" data-i18n="btnRefresh">Refresh</button>
                 </div>
-                <p class="muted" style="font-size:13px; margin-bottom:14px;">
+                <p class="muted" style="font-size:13px; margin-bottom:14px;" data-i18n="adminNote">
                     System-wide overview of every uploaded file. File contents remain private to their owners.
                 </p>
                 <div id="adminList"></div>
@@ -465,113 +472,113 @@
         <div class="card modal">
             <div class="modal-head">
                 <div>
-                    <h2>Share file</h2>
+                    <h2 data-i18n="shareFile">Share file</h2>
                     <div class="fname-sub" id="shareFileName"></div>
                 </div>
-                <button class="icon-x" onclick="closeShareModal()" aria-label="Close">&times;</button>
+                <button class="icon-x" onclick="closeShareModal()" aria-label="Close" data-i18n-aria="close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="tabs" style="margin-bottom:20px;">
-                    <div class="tab active" id="shTabLink" onclick="shareTab('link')">Share link</div>
-                    <div class="tab" id="shTabUser" onclick="shareTab('user')">Share with a user</div>
-                    <div class="tab" id="shTabGroup" onclick="shareTab('group')">Share with a group</div>
+                    <div class="tab active" id="shTabLink" onclick="shareTab('link')" data-i18n="shTabLink">Share link</div>
+                    <div class="tab" id="shTabUser" onclick="shareTab('user')" data-i18n="shTabUser">Share with a user</div>
+                    <div class="tab" id="shTabGroup" onclick="shareTab('group')" data-i18n="shTabGroup">Share with a group</div>
                 </div>
 
                 <!-- Link pane -->
                 <div id="shLinkPane">
                     <div class="form-row">
                         <div class="field">
-                            <label>Expires</label>
+                            <label data-i18n="lblExpires">Expires</label>
                             <select id="shExpiry">
-                                <option value="">Never</option>
-                                <option value="60">1 hour</option>
-                                <option value="1440">24 hours</option>
-                                <option value="10080">7 days</option>
+                                <option value="" data-i18n="expNever">Never</option>
+                                <option value="60" data-i18n="exp1h">1 hour</option>
+                                <option value="1440" data-i18n="exp24h">24 hours</option>
+                                <option value="10080" data-i18n="exp7d">7 days</option>
                             </select>
                         </div>
                         <div class="field">
-                            <label>Download limit <span class="muted">(optional)</span></label>
-                            <input type="text" id="shMaxDownloads" inputmode="numeric" placeholder="e.g. 1 = one-time">
+                            <label data-i18n-html="lblDownloadLimit">Download limit <span class="muted">(optional)</span></label>
+                            <input type="text" id="shMaxDownloads" inputmode="numeric" placeholder="e.g. 1 = one-time" data-i18n-ph="phDownloadLimit">
                         </div>
                     </div>
                     <div class="field">
-                        <label>Password <span class="muted">(optional)</span></label>
-                        <input type="text" id="shPassword" placeholder="Leave blank for no password" autocomplete="off">
+                        <label data-i18n-html="lblPasswordOpt">Password <span class="muted">(optional)</span></label>
+                        <input type="text" id="shPassword" placeholder="Leave blank for no password" data-i18n-ph="phNoPassword" autocomplete="off">
                     </div>
                     <label class="check-row" for="shBurn">
                         <input type="checkbox" id="shBurn">
-                        <span>Burn after the download limit <span class="muted">file is destroyed once its downloads run out.</span></span>
+                        <span data-i18n-html="chkBurn">Burn after the download limit <span class="muted">file is destroyed once its downloads run out.</span></span>
                     </label>
                     <label class="check-row" for="shNotify">
                         <input type="checkbox" id="shNotify">
-                        <span>Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
+                        <span data-i18n-html="chkNotify">Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
                     </label>
-                    <button class="full" id="shCreateBtn" onclick="createLink()">Create link</button>
+                    <button class="full" id="shCreateBtn" onclick="createLink()" data-i18n="btnCreateLink">Create link</button>
                     <div id="shLinkMsg" class="msg"></div>
                     <div class="copy-box hidden" id="shLinkResult">
                         <input type="text" id="shLinkUrl" readonly>
-                        <button class="secondary" onclick="copyLink()">Copy</button>
+                        <button class="secondary" onclick="copyLink()" data-i18n="btnCopy">Copy</button>
                     </div>
                 </div>
 
                 <!-- User pane -->
                 <div id="shUserPane" class="hidden">
                     <div class="field">
-                        <label>Recipient email</label>
+                        <label data-i18n="lblRecipientEmail">Recipient email</label>
                         <input type="email" id="shRecipient" placeholder="user@example.com" autocomplete="off"
                                onkeydown="if(event.key==='Enter') shareWithUser()">
                     </div>
                     <div class="field">
-                        <label>Self-destruct <span class="muted">(optional)</span></label>
+                        <label data-i18n-html="lblSelfDestruct">Self-destruct <span class="muted">(optional)</span></label>
                         <select id="shBurnMode">
-                            <option value="NONE">Do not auto-destroy</option>
-                            <option value="FIRST">Destroy after the first recipient opens it</option>
-                            <option value="ALL">Destroy after every recipient has opened it</option>
+                            <option value="NONE" data-i18n="burnNone">Do not auto-destroy</option>
+                            <option value="FIRST" data-i18n="burnFirst">Destroy after the first recipient opens it</option>
+                            <option value="ALL" data-i18n="burnAll">Destroy after every recipient has opened it</option>
                         </select>
                     </div>
                     <label class="check-row" for="shUserNotify">
                         <input type="checkbox" id="shUserNotify">
-                        <span>Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
+                        <span data-i18n-html="chkNotify">Email me when this is downloaded <span class="muted">get a notification with the downloader's IP.</span></span>
                     </label>
-                    <button class="full" id="shUserBtn" onclick="shareWithUser()">Share with user</button>
+                    <button class="full" id="shUserBtn" onclick="shareWithUser()" data-i18n="btnShareUser">Share with user</button>
                     <div id="shUserMsg" class="msg"></div>
                 </div>
 
                 <!-- Group pane -->
                 <div id="shGroupPane" class="hidden">
                     <div class="field">
-                        <label>Group name <span class="muted">(optional)</span></label>
-                        <input type="text" id="shGroupName" placeholder="e.g. Marketing team" autocomplete="off">
+                        <label data-i18n-html="lblGroupName">Group name <span class="muted">(optional)</span></label>
+                        <input type="text" id="shGroupName" placeholder="e.g. Marketing team" data-i18n-ph="phGroupName" autocomplete="off">
                     </div>
                     <div class="field">
-                        <label>Recipient emails</label>
+                        <label data-i18n="lblRecipientEmails">Recipient emails</label>
                         <textarea id="shGroupEmails" rows="5"
-                                  placeholder="Paste emails, one per line or comma-separated"></textarea>
-                        <span class="muted" style="font-size:12px;">Registered recipients see the file after signing in. For everyone else, use Export links to share a personal download link that needs no account.</span>
+                                  placeholder="Paste emails, one per line or comma-separated" data-i18n-ph="phGroupEmails"></textarea>
+                        <span class="muted" style="font-size:12px;" data-i18n="groupNote">Registered recipients see the file after signing in. For everyone else, use Export links to share a personal download link that needs no account.</span>
                     </div>
                     <div class="field">
-                        <label>Self-destruct <span class="muted">(optional)</span></label>
+                        <label data-i18n-html="lblSelfDestruct">Self-destruct <span class="muted">(optional)</span></label>
                         <select id="shGroupBurn">
-                            <option value="NONE">Do not auto-destroy</option>
-                            <option value="FIRST">Destroy after the first recipient opens it</option>
-                            <option value="ALL">Destroy after every recipient has opened it</option>
+                            <option value="NONE" data-i18n="burnNone">Do not auto-destroy</option>
+                            <option value="FIRST" data-i18n="burnFirst">Destroy after the first recipient opens it</option>
+                            <option value="ALL" data-i18n="burnAll">Destroy after every recipient has opened it</option>
                         </select>
                     </div>
                     <label class="check-row hidden" id="shGroupEmailRow" for="shGroupEmail">
                         <input type="checkbox" id="shGroupEmail">
-                        <span>Email a personal download link to each recipient <span class="muted">sent in the background; no account needed to open.</span></span>
+                        <span data-i18n-html="chkGroupEmail">Email a personal download link to each recipient <span class="muted">sent in the background; no account needed to open.</span></span>
                     </label>
-                    <button class="full" id="shGroupBtn" onclick="shareWithGroup()">Share with group</button>
+                    <button class="full" id="shGroupBtn" onclick="shareWithGroup()" data-i18n="btnShareGroup">Share with group</button>
                     <div id="shGroupMsg" class="msg"></div>
                 </div>
 
                 <div class="share-existing">
-                    <h3>Active shares</h3>
+                    <h3 data-i18n="activeShares">Active shares</h3>
                     <div id="shareList"></div>
                 </div>
 
                 <div class="share-existing">
-                    <h3>Recent downloads</h3>
+                    <h3 data-i18n="recentDownloads">Recent downloads</h3>
                     <div id="downloadList"></div>
                 </div>
             </div>
@@ -581,6 +588,328 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        I18N.register({
+            en: {
+                _title: 'SecShare',
+                navDocs: 'Documentation',
+                navSignOut: 'Sign out',
+                heroTitle: 'Private, authenticated file sharing you can host yourself.',
+                heroSub: 'SecShare gives every user a secure, personal space to upload and manage files over a clean REST API. Your files stay yours. Access is protected by JWT authentication.',
+                point1Title: 'Per-user isolation.',
+                point1Desc: 'You can only see, download, and delete your own files.',
+                point2Title: 'Token-based access.',
+                point2Desc: 'Sign in once and every request is authorized with a JWT.',
+                point3Title: 'Broad format support.',
+                point3Desc: 'PDF, images, text, Office documents and ZIP archives up to 50&nbsp;MB.',
+                docHint: 'New here? Read the <a href="/guide.html">usage guide</a> to learn how it works.',
+                tabSignIn: 'Sign in',
+                tabCreate: 'Create account',
+                labelEmail: 'Email',
+                labelPassword: 'Password',
+                phPassword: 'Your password',
+                labelPasswordHint: 'Password <span class="muted">(at least 8 characters)</span>',
+                phChoosePassword: 'Choose a strong password',
+                statFiles: 'Files',
+                statStorage: 'Storage used',
+                statRole: 'Role',
+                statSince: 'Member since',
+                uploadTitle: 'Upload a file',
+                max50: 'Max 50 MB',
+                dropText: 'Drag a file here, or <strong>click to browse</strong>',
+                dropTypes: 'PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP · scanned for malware on upload',
+                btnUpload: 'Upload',
+                btnClear: 'Clear',
+                yourFiles: 'Your files',
+                btnRefresh: 'Refresh',
+                sharedWithMe: 'Shared with me',
+                allFiles: 'All files <span class="badge">Admin</span>',
+                adminNote: 'System-wide overview of every uploaded file. File contents remain private to their owners.',
+                shareFile: 'Share file',
+                close: 'Close',
+                shTabLink: 'Share link',
+                shTabUser: 'Share with a user',
+                shTabGroup: 'Share with a group',
+                lblExpires: 'Expires',
+                expNever: 'Never',
+                exp1h: '1 hour',
+                exp24h: '24 hours',
+                exp7d: '7 days',
+                lblDownloadLimit: 'Download limit <span class="muted">(optional)</span>',
+                phDownloadLimit: 'e.g. 1 = one-time',
+                lblPasswordOpt: 'Password <span class="muted">(optional)</span>',
+                phNoPassword: 'Leave blank for no password',
+                chkBurn: 'Burn after the download limit <span class="muted">file is destroyed once its downloads run out.</span>',
+                chkNotify: "Email me when this is downloaded <span class=\"muted\">get a notification with the downloader's IP.</span>",
+                btnCreateLink: 'Create link',
+                btnCopy: 'Copy',
+                lblRecipientEmail: 'Recipient email',
+                lblSelfDestruct: 'Self-destruct <span class="muted">(optional)</span>',
+                burnNone: 'Do not auto-destroy',
+                burnFirst: 'Destroy after the first recipient opens it',
+                burnAll: 'Destroy after every recipient has opened it',
+                btnShareUser: 'Share with user',
+                lblGroupName: 'Group name <span class="muted">(optional)</span>',
+                phGroupName: 'e.g. Marketing team',
+                lblRecipientEmails: 'Recipient emails',
+                phGroupEmails: 'Paste emails, one per line or comma-separated',
+                groupNote: 'Registered recipients see the file after signing in. For everyone else, use Export links to share a personal download link that needs no account.',
+                chkGroupEmail: 'Email a personal download link to each recipient <span class="muted">sent in the background; no account needed to open.</span>',
+                btnShareGroup: 'Share with group',
+                activeShares: 'Active shares',
+                recentDownloads: 'Recent downloads',
+                thName: 'Name',
+                thShared: 'Shared',
+                thType: 'Type',
+                thSize: 'Size',
+                thUploaded: 'Uploaded',
+                btnDownload: 'Download',
+                btnShare: 'Share',
+                btnDelete: 'Delete',
+                btnRevoke: 'Revoke',
+                btnExportLinks: 'Export links',
+                scanClean: '🛡 Clean',
+                scanCleanTitle: 'Scanned on upload — no malware detected',
+                tLink: 'Link',
+                tUser: 'User',
+                tGroup: 'Group',
+                chipBurn: 'Burn',
+                chipNotify: 'Notify',
+                chipBurned: 'Burned',
+                downloadsWord: 'downloads',
+                jsEmailPwRequired: 'Email and password are required.',
+                jsPwMin8: 'Password must be at least 8 characters.',
+                jsAccountCreated: 'Account created. You can sign in now.',
+                jsEmailTaken: 'That email is already registered.',
+                jsRegFailed: 'Registration failed ({code}).',
+                jsNetError: 'Network error. Please try again.',
+                jsNetErrorShort: 'Network error.',
+                jsInvalidCreds: 'Invalid email or password.',
+                jsSignInFailed: 'Sign in failed ({code}).',
+                jsSignedOut: 'Signed out.',
+                jsCantLoadShared: 'Could not load shared files.',
+                jsNoShared: 'No files have been shared with you yet.',
+                jsDownloadFailed: 'Download failed.',
+                jsDownloadError: 'Download error.',
+                jsLimitPositive: 'Download limit must be a positive number.',
+                jsCantCreateLink: 'Could not create link ({code}).',
+                jsLinkCreated: 'Share link created.',
+                jsLinkCopied: 'Link copied.',
+                jsRecipientRequired: 'Recipient email is required.',
+                jsNoUser: 'No user with that email.',
+                jsAlreadyShared: 'Already shared with this user.',
+                jsInvalidRequest: 'Invalid request.',
+                jsCantShare: 'Could not share ({code}).',
+                jsSharedWith: 'Shared with {email}.',
+                jsFileShared: 'File shared.',
+                jsEnterOneEmail: 'Enter at least one recipient email.',
+                jsEmailingLinks: ' Emailing personal links now.',
+                jsSharedCount1: 'Shared with 1 recipient.',
+                jsSharedCountN: 'Shared with {count} recipients.',
+                jsFileSharedGroup: 'File shared with group.',
+                jsCantExport: 'Could not export links.',
+                jsNoRecipients: 'No recipients to export.',
+                jsExported1: 'Exported 1 recipient link.',
+                jsExportedN: 'Exported {count} recipient links.',
+                jsCantLoadShares: 'Could not load shares.',
+                jsNoActiveShares: 'No active shares for this file.',
+                jsDestroyedAfterN: 'destroyed after {n} downloads',
+                jsDestroyedAfterOne: 'destroyed after one download',
+                jsPassword: 'password',
+                jsExpires: 'expires {date}',
+                jsRecipients1: '1 recipient',
+                jsRecipientsN: '{count} recipients',
+                jsDestroyedFirst: 'destroyed after first open',
+                jsDestroyedAll: 'destroyed after all open',
+                jsDestroyedAllRecipients: 'destroyed after all recipients open',
+                jsSharedOn: 'shared {date}',
+                jsGrantedOn: 'granted {date}',
+                jsCantLoadDownloads: 'Could not load download history.',
+                jsNoDownloads: 'No downloads yet.',
+                jsAnonLink: 'Anonymous link',
+                jsConfirmRevoke: 'Revoke this share? The recipient or link will stop working.',
+                jsShareRevoked: 'Share revoked.',
+                jsRevokeFailed: 'Revoke failed.',
+                jsRevokeError: 'Revoke error.',
+                jsAdminRequired: 'Admin role required.',
+                jsCantLoadFiles: 'Could not load files.',
+                jsNoFilesSystem: 'No files in the system yet.',
+                jsNoFilesYet: 'No files yet. Upload your first file above.',
+                jsTooLarge: 'File is too large (max 50 MB).',
+                upUploading: 'Uploading file…',
+                upScanning: 'Scanning for malware…',
+                upClean: 'Clean',
+                upMalware: 'Malware detected. Upload blocked.',
+                jsUploadRejected: 'Upload rejected: file type not allowed or file is empty.',
+                jsUploadFailed: 'Upload failed: {detail}',
+                jsFileUploaded: 'File uploaded.',
+                jsConfirmDelete: 'Delete this file permanently?',
+                jsFileDeleted: 'File deleted.',
+                jsDeleteFailed: 'Delete failed.',
+                jsDeleteError: 'Delete error.'
+            },
+            tr: {
+                _title: 'SecShare',
+                navDocs: 'Dokümantasyon',
+                navSignOut: 'Çıkış yap',
+                heroTitle: 'Kendi sunucunuzda barındırabileceğiniz, kimlik doğrulamalı özel dosya paylaşımı.',
+                heroSub: 'SecShare her kullanıcıya, temiz bir REST API üzerinden dosya yükleyip yönetebileceği güvenli, kişisel bir alan sunar. Dosyalarınız sizin kalır. Erişim JWT kimlik doğrulamasıyla korunur.',
+                point1Title: 'Kullanıcı bazlı yalıtım.',
+                point1Desc: 'Yalnızca kendi dosyalarınızı görebilir, indirebilir ve silebilirsiniz.',
+                point2Title: 'Anahtar tabanlı erişim.',
+                point2Desc: 'Bir kez giriş yapın, her istek bir JWT ile yetkilendirilsin.',
+                point3Title: 'Geniş format desteği.',
+                point3Desc: '50&nbsp;MB\'a kadar PDF, resim, metin, Office belgeleri ve ZIP arşivleri.',
+                docHint: 'Yeni misiniz? Nasıl çalıştığını öğrenmek için <a href="/guide.html">kullanım kılavuzunu</a> okuyun.',
+                tabSignIn: 'Giriş yap',
+                tabCreate: 'Hesap oluştur',
+                labelEmail: 'E-posta',
+                labelPassword: 'Parola',
+                phPassword: 'Parolanız',
+                labelPasswordHint: 'Parola <span class="muted">(en az 8 karakter)</span>',
+                phChoosePassword: 'Güçlü bir parola seçin',
+                statFiles: 'Dosyalar',
+                statStorage: 'Kullanılan alan',
+                statRole: 'Rol',
+                statSince: 'Üyelik tarihi',
+                uploadTitle: 'Dosya yükle',
+                max50: 'En fazla 50 MB',
+                dropText: 'Buraya bir dosya sürükleyin veya <strong>göz atmak için tıklayın</strong>',
+                dropTypes: 'PDF, PNG, JPG, TXT, DOC, DOCX, XLSX, ZIP · yüklemede kötü amaçlı yazılıma karşı taranır',
+                btnUpload: 'Yükle',
+                btnClear: 'Temizle',
+                yourFiles: 'Dosyalarınız',
+                btnRefresh: 'Yenile',
+                sharedWithMe: 'Benimle paylaşılanlar',
+                allFiles: 'Tüm dosyalar <span class="badge">Yönetici</span>',
+                adminNote: 'Yüklenen her dosyanın sistem geneli görünümü. Dosya içerikleri sahiplerine özel kalır.',
+                shareFile: 'Dosyayı paylaş',
+                close: 'Kapat',
+                shTabLink: 'Paylaşım bağlantısı',
+                shTabUser: 'Bir kullanıcıyla paylaş',
+                shTabGroup: 'Bir grupla paylaş',
+                lblExpires: 'Sona erme',
+                expNever: 'Asla',
+                exp1h: '1 saat',
+                exp24h: '24 saat',
+                exp7d: '7 gün',
+                lblDownloadLimit: 'İndirme sınırı <span class="muted">(isteğe bağlı)</span>',
+                phDownloadLimit: 'örn. 1 = tek seferlik',
+                lblPasswordOpt: 'Parola <span class="muted">(isteğe bağlı)</span>',
+                phNoPassword: 'Parola istemiyorsanız boş bırakın',
+                chkBurn: 'İndirme sınırından sonra imha et <span class="muted">indirmeleri bittiğinde dosya yok edilir.</span>',
+                chkNotify: 'İndirildiğinde bana e-posta gönder <span class="muted">indireni gösteren IP ile bildirim alın.</span>',
+                btnCreateLink: 'Bağlantı oluştur',
+                btnCopy: 'Kopyala',
+                lblRecipientEmail: 'Alıcı e-postası',
+                lblSelfDestruct: 'Kendini imha <span class="muted">(isteğe bağlı)</span>',
+                burnNone: 'Otomatik imha etme',
+                burnFirst: 'İlk alıcı açtıktan sonra imha et',
+                burnAll: 'Her alıcı açtıktan sonra imha et',
+                btnShareUser: 'Kullanıcıyla paylaş',
+                lblGroupName: 'Grup adı <span class="muted">(isteğe bağlı)</span>',
+                phGroupName: 'örn. Pazarlama ekibi',
+                lblRecipientEmails: 'Alıcı e-postaları',
+                phGroupEmails: 'E-postaları her satıra bir tane veya virgülle ayırarak yapıştırın',
+                groupNote: 'Kayıtlı alıcılar dosyayı giriş yaptıktan sonra görür. Diğer herkes için, hesap gerektirmeyen kişisel bir indirme bağlantısı paylaşmak üzere Bağlantıları dışa aktar\'ı kullanın.',
+                chkGroupEmail: 'Her alıcıya kişisel bir indirme bağlantısı e-postala <span class="muted">arka planda gönderilir; açmak için hesap gerekmez.</span>',
+                btnShareGroup: 'Grupla paylaş',
+                activeShares: 'Etkin paylaşımlar',
+                recentDownloads: 'Son indirmeler',
+                thName: 'Ad',
+                thShared: 'Paylaşıldı',
+                thType: 'Tür',
+                thSize: 'Boyut',
+                thUploaded: 'Yüklendi',
+                btnDownload: 'İndir',
+                btnShare: 'Paylaş',
+                btnDelete: 'Sil',
+                btnRevoke: 'İptal et',
+                btnExportLinks: 'Bağlantıları dışa aktar',
+                scanClean: '🛡 Temiz',
+                scanCleanTitle: 'Yüklemede tarandı — kötü amaçlı yazılım bulunamadı',
+                tLink: 'Bağlantı',
+                tUser: 'Kullanıcı',
+                tGroup: 'Grup',
+                chipBurn: 'İmha',
+                chipNotify: 'Bildir',
+                chipBurned: 'İmha edildi',
+                downloadsWord: 'indirme',
+                jsEmailPwRequired: 'E-posta ve parola gereklidir.',
+                jsPwMin8: 'Parola en az 8 karakter olmalıdır.',
+                jsAccountCreated: 'Hesap oluşturuldu. Şimdi giriş yapabilirsiniz.',
+                jsEmailTaken: 'Bu e-posta zaten kayıtlı.',
+                jsRegFailed: 'Kayıt başarısız ({code}).',
+                jsNetError: 'Ağ hatası. Lütfen tekrar deneyin.',
+                jsNetErrorShort: 'Ağ hatası.',
+                jsInvalidCreds: 'E-posta veya parola hatalı.',
+                jsSignInFailed: 'Giriş başarısız ({code}).',
+                jsSignedOut: 'Çıkış yapıldı.',
+                jsCantLoadShared: 'Paylaşılan dosyalar yüklenemedi.',
+                jsNoShared: 'Sizinle henüz bir dosya paylaşılmadı.',
+                jsDownloadFailed: 'İndirme başarısız.',
+                jsDownloadError: 'İndirme hatası.',
+                jsLimitPositive: 'İndirme sınırı pozitif bir sayı olmalıdır.',
+                jsCantCreateLink: 'Bağlantı oluşturulamadı ({code}).',
+                jsLinkCreated: 'Paylaşım bağlantısı oluşturuldu.',
+                jsLinkCopied: 'Bağlantı kopyalandı.',
+                jsRecipientRequired: 'Alıcı e-postası gereklidir.',
+                jsNoUser: 'Bu e-postaya sahip kullanıcı yok.',
+                jsAlreadyShared: 'Bu kullanıcıyla zaten paylaşıldı.',
+                jsInvalidRequest: 'Geçersiz istek.',
+                jsCantShare: 'Paylaşılamadı ({code}).',
+                jsSharedWith: '{email} ile paylaşıldı.',
+                jsFileShared: 'Dosya paylaşıldı.',
+                jsEnterOneEmail: 'En az bir alıcı e-postası girin.',
+                jsEmailingLinks: ' Kişisel bağlantılar şimdi e-postalanıyor.',
+                jsSharedCount1: '1 alıcıyla paylaşıldı.',
+                jsSharedCountN: '{count} alıcıyla paylaşıldı.',
+                jsFileSharedGroup: 'Dosya grupla paylaşıldı.',
+                jsCantExport: 'Bağlantılar dışa aktarılamadı.',
+                jsNoRecipients: 'Dışa aktarılacak alıcı yok.',
+                jsExported1: '1 alıcı bağlantısı dışa aktarıldı.',
+                jsExportedN: '{count} alıcı bağlantısı dışa aktarıldı.',
+                jsCantLoadShares: 'Paylaşımlar yüklenemedi.',
+                jsNoActiveShares: 'Bu dosya için etkin paylaşım yok.',
+                jsDestroyedAfterN: '{n} indirmeden sonra imha edilir',
+                jsDestroyedAfterOne: 'bir indirmeden sonra imha edilir',
+                jsPassword: 'parola',
+                jsExpires: 'sona erme {date}',
+                jsRecipients1: '1 alıcı',
+                jsRecipientsN: '{count} alıcı',
+                jsDestroyedFirst: 'ilk açılıştan sonra imha edilir',
+                jsDestroyedAll: 'tümü açıldıktan sonra imha edilir',
+                jsDestroyedAllRecipients: 'tüm alıcılar açtıktan sonra imha edilir',
+                jsSharedOn: 'paylaşıldı {date}',
+                jsGrantedOn: 'verildi {date}',
+                jsCantLoadDownloads: 'İndirme geçmişi yüklenemedi.',
+                jsNoDownloads: 'Henüz indirme yok.',
+                jsAnonLink: 'Anonim bağlantı',
+                jsConfirmRevoke: 'Bu paylaşım iptal edilsin mi? Alıcı veya bağlantı çalışmayı durduracak.',
+                jsShareRevoked: 'Paylaşım iptal edildi.',
+                jsRevokeFailed: 'İptal başarısız.',
+                jsRevokeError: 'İptal hatası.',
+                jsAdminRequired: 'Yönetici rolü gerekli.',
+                jsCantLoadFiles: 'Dosyalar yüklenemedi.',
+                jsNoFilesSystem: 'Sistemde henüz dosya yok.',
+                jsNoFilesYet: 'Henüz dosya yok. İlk dosyanızı yukarıdan yükleyin.',
+                jsTooLarge: 'Dosya çok büyük (en fazla 50 MB).',
+                upUploading: 'Dosya yükleniyor…',
+                upScanning: 'Kötü amaçlı yazılım taranıyor…',
+                upClean: 'Temiz',
+                upMalware: 'Kötü amaçlı yazılım algılandı. Yükleme engellendi.',
+                jsUploadRejected: 'Yükleme reddedildi: dosya türüne izin verilmiyor veya dosya boş.',
+                jsUploadFailed: 'Yükleme başarısız: {detail}',
+                jsFileUploaded: 'Dosya yüklendi.',
+                jsConfirmDelete: 'Bu dosya kalıcı olarak silinsin mi?',
+                jsFileDeleted: 'Dosya silindi.',
+                jsDeleteFailed: 'Silme başarısız.',
+                jsDeleteError: 'Silme hatası.'
+            }
+        });
+        const t = (k, v) => I18N.t(k, v);
+        const fmtDate = d => new Date(d).toLocaleDateString(I18N.locale, { year: 'numeric', month: 'short', day: 'numeric' });
+        const fmtDateTime = d => new Date(d).toLocaleString(I18N.locale);
+
         const API = {
             register: '/api/auth/register',
             login: '/api/auth/login',
@@ -594,10 +923,28 @@
         let currentFiles = [];
         let isAdmin = false;
         let mailEnabled = false;
+        let memberSince = null;
 
         fetch('/api/info').then(r => r.ok ? r.json() : null).then(info => {
             mailEnabled = !!(info && info.mailEnabled);
         }).catch(() => {});
+
+        // Re-render everything language-dependent when the toggle flips.
+        window.onLangChange = function () {
+            if (memberSince != null) {
+                document.getElementById('statSince').textContent = memberSince ? fmtDate(memberSince) : '—';
+            }
+            if (!token) return;
+            if (!document.getElementById('dashboard').classList.contains('hidden')) {
+                loadFiles();
+                loadSharedWithMe();
+                if (isAdmin) loadAllFiles();
+            }
+            if (shareFileId && !document.getElementById('shareModal').classList.contains('hidden')) {
+                loadShares();
+                loadDownloads(shareFileId);
+            }
+        };
 
         function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
 
@@ -662,8 +1009,8 @@
             clearMsg('regMsg');
             const email = document.getElementById('regEmail').value.trim();
             const password = document.getElementById('regPassword').value;
-            if (!email || !password) return showMsg('regMsg', 'Email and password are required.', false);
-            if (password.length < 8) return showMsg('regMsg', 'Password must be at least 8 characters.', false);
+            if (!email || !password) return showMsg('regMsg', t('jsEmailPwRequired'), false);
+            if (password.length < 8) return showMsg('regMsg', t('jsPwMin8'), false);
 
             busy('regBtn', true);
             try {
@@ -673,17 +1020,17 @@
                     body: JSON.stringify({ email, password })
                 });
                 if (res.status === 201) {
-                    showMsg('regMsg', 'Account created. You can sign in now.', true);
+                    showMsg('regMsg', t('jsAccountCreated'), true);
                     document.getElementById('loginEmail').value = email;
                     document.getElementById('loginPassword').value = password;
                     setTimeout(() => switchTab('login'), 700);
                 } else if (res.status === 409) {
-                    showMsg('regMsg', 'That email is already registered.', false);
+                    showMsg('regMsg', t('jsEmailTaken'), false);
                 } else {
-                    showMsg('regMsg', 'Registration failed (' + res.status + ').', false);
+                    showMsg('regMsg', t('jsRegFailed', { code: res.status }), false);
                 }
             } catch (e) {
-                showMsg('regMsg', 'Network error. Please try again.', false);
+                showMsg('regMsg', t('jsNetError'), false);
             } finally { busy('regBtn', false); }
         }
 
@@ -691,7 +1038,7 @@
             clearMsg('loginMsg');
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
-            if (!email || !password) return showMsg('loginMsg', 'Email and password are required.', false);
+            if (!email || !password) return showMsg('loginMsg', t('jsEmailPwRequired'), false);
 
             busy('loginBtn', true);
             try {
@@ -706,12 +1053,12 @@
                     localStorage.setItem('secshare_token', token);
                     await enterApp();
                 } else if (res.status === 401) {
-                    showMsg('loginMsg', 'Invalid email or password.', false);
+                    showMsg('loginMsg', t('jsInvalidCreds'), false);
                 } else {
-                    showMsg('loginMsg', 'Sign in failed (' + res.status + ').', false);
+                    showMsg('loginMsg', t('jsSignInFailed', { code: res.status }), false);
                 }
             } catch (e) {
-                showMsg('loginMsg', 'Network error. Please try again.', false);
+                showMsg('loginMsg', t('jsNetError'), false);
             } finally { busy('loginBtn', false); }
         }
 
@@ -725,7 +1072,7 @@
             document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('landing').classList.remove('hidden');
             document.getElementById('loginPassword').value = '';
-            toast('Signed out.');
+            toast(t('jsSignedOut'));
         }
 
         async function enterApp() {
@@ -748,9 +1095,8 @@
             document.getElementById('userChip').classList.remove('hidden');
 
             document.getElementById('statRole').textContent = (me.roles && me.roles.length) ? me.roles.join(', ') : 'USER';
-            document.getElementById('statSince').textContent = me.createdAt
-                ? new Date(me.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                : '—';
+            memberSince = me.createdAt || '';
+            document.getElementById('statSince').textContent = me.createdAt ? fmtDate(me.createdAt) : '—';
 
             isAdmin = Array.isArray(me.roles) && me.roles.includes('ADMIN');
             document.getElementById('adminPanel').classList.toggle('hidden', !isAdmin);
@@ -771,17 +1117,17 @@
             try {
                 const res = await fetch(API.files + '/shared-with-me', { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load shared files.</div>'; return; }
+                if (!res.ok) { list.innerHTML = `<div class="empty">${t('jsCantLoadShared')}</div>`; return; }
 
                 const shares = await res.json();
                 if (!shares.length) {
-                    list.innerHTML = '<div class="empty" style="padding:28px;">No files have been shared with you yet.</div>';
+                    list.innerHTML = `<div class="empty" style="padding:28px;">${t('jsNoShared')}</div>`;
                     return;
                 }
                 list.innerHTML = `
                     <table class="files">
                         <thead>
-                            <tr><th>Name</th><th class="col-meta">Shared</th><th></th></tr>
+                            <tr><th>${t('thName')}</th><th class="col-meta">${t('thShared')}</th><th></th></tr>
                         </thead>
                         <tbody>
                             ${shares.map(s => `
@@ -792,30 +1138,30 @@
                                             <div class="fname-cell" title="${escapeHtml(s.fileName)}">${escapeHtml(s.fileName)}</div>
                                         </div>
                                     </td>
-                                    <td class="muted">${new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                    <td class="muted">${fmtDate(s.createdAt)}</td>
                                     <td class="col-actions">
-                                        <button class="secondary sm" onclick="downloadShared('${s.fileId}','${escapeHtml(s.fileName).replace(/'/g, "\\'")}')">Download</button>
+                                        <button class="secondary sm" onclick="downloadShared('${s.fileId}','${escapeHtml(s.fileName).replace(/'/g, "\\'")}')">${t('btnDownload')}</button>
                                     </td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>`;
             } catch (e) {
-                list.innerHTML = '<div class="empty">Network error.</div>';
+                list.innerHTML = `<div class="empty">${t('jsNetErrorShort')}</div>`;
             }
         }
 
         async function downloadShared(fileId, name) {
             try {
                 const res = await fetch(API.files + '/' + fileId, { headers: authHeaders() });
-                if (!res.ok) { toast('Download failed.'); return; }
+                if (!res.ok) { toast(t('jsDownloadFailed')); return; }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = name || 'download';
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
-            } catch (e) { toast('Download error.'); }
+            } catch (e) { toast(t('jsDownloadError')); }
         }
 
         function openShareModal(fileId) {
@@ -869,7 +1215,7 @@
             const maxStr = document.getElementById('shMaxDownloads').value.trim();
             if (maxStr) {
                 const max = parseInt(maxStr, 10);
-                if (isNaN(max) || max <= 0) return showMsg('shLinkMsg', 'Download limit must be a positive number.', false);
+                if (isNaN(max) || max <= 0) return showMsg('shLinkMsg', t('jsLimitPositive'), false);
                 body.maxDownloads = max;
             }
             const pw = document.getElementById('shPassword').value;
@@ -885,31 +1231,31 @@
                     body: JSON.stringify(body)
                 });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { showMsg('shLinkMsg', 'Could not create link (' + res.status + ').', false); return; }
+                if (!res.ok) { showMsg('shLinkMsg', t('jsCantCreateLink', { code: res.status }), false); return; }
                 const share = await res.json();
                 const fullUrl = window.location.origin + share.url;
                 const input = document.getElementById('shLinkUrl');
                 input.value = fullUrl;
                 document.getElementById('shLinkResult').classList.remove('hidden');
-                toast('Share link created.');
+                toast(t('jsLinkCreated'));
                 loadShares();
             } catch (e) {
-                showMsg('shLinkMsg', 'Network error. Please try again.', false);
+                showMsg('shLinkMsg', t('jsNetError'), false);
             } finally { busy('shCreateBtn', false); }
         }
 
         function copyLink() {
             const input = document.getElementById('shLinkUrl');
             input.select();
-            navigator.clipboard.writeText(input.value).then(() => toast('Link copied.')).catch(() => {
-                document.execCommand('copy'); toast('Link copied.');
+            navigator.clipboard.writeText(input.value).then(() => toast(t('jsLinkCopied'))).catch(() => {
+                document.execCommand('copy'); toast(t('jsLinkCopied'));
             });
         }
 
         async function shareWithUser() {
             clearMsg('shUserMsg');
             const email = document.getElementById('shRecipient').value.trim();
-            if (!email) return showMsg('shUserMsg', 'Recipient email is required.', false);
+            if (!email) return showMsg('shUserMsg', t('jsRecipientRequired'), false);
             const burnMode = document.getElementById('shBurnMode').value;
             const notifyOnDownload = document.getElementById('shUserNotify').checked;
 
@@ -921,16 +1267,16 @@
                     body: JSON.stringify({ type: 'USER', recipientEmail: email, burnMode, notifyOnDownload })
                 });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 404) { showMsg('shUserMsg', 'No user with that email.', false); return; }
-                if (res.status === 409) { showMsg('shUserMsg', 'Already shared with this user.', false); return; }
-                if (res.status === 400) { const t = await res.text(); showMsg('shUserMsg', t || 'Invalid request.', false); return; }
-                if (!res.ok) { showMsg('shUserMsg', 'Could not share (' + res.status + ').', false); return; }
+                if (res.status === 404) { showMsg('shUserMsg', t('jsNoUser'), false); return; }
+                if (res.status === 409) { showMsg('shUserMsg', t('jsAlreadyShared'), false); return; }
+                if (res.status === 400) { const msg = await res.text(); showMsg('shUserMsg', msg || t('jsInvalidRequest'), false); return; }
+                if (!res.ok) { showMsg('shUserMsg', t('jsCantShare', { code: res.status }), false); return; }
                 document.getElementById('shRecipient').value = '';
-                showMsg('shUserMsg', 'Shared with ' + email + '.', true);
-                toast('File shared.');
+                showMsg('shUserMsg', t('jsSharedWith', { email }), true);
+                toast(t('jsFileShared'));
                 loadShares();
             } catch (e) {
-                showMsg('shUserMsg', 'Network error. Please try again.', false);
+                showMsg('shUserMsg', t('jsNetError'), false);
             } finally { busy('shUserBtn', false); }
         }
 
@@ -938,7 +1284,7 @@
             clearMsg('shGroupMsg');
             const raw = document.getElementById('shGroupEmails').value;
             const emails = raw.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
-            if (!emails.length) return showMsg('shGroupMsg', 'Enter at least one recipient email.', false);
+            if (!emails.length) return showMsg('shGroupMsg', t('jsEnterOneEmail'), false);
             const name = document.getElementById('shGroupName').value.trim();
             const burnMode = document.getElementById('shGroupBurn').value;
             const emailLinks = document.getElementById('shGroupEmail').checked;
@@ -951,16 +1297,17 @@
                     body: JSON.stringify({ type: 'AUDIENCE', recipientEmails: emails, name, burnMode, emailLinks })
                 });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 400) { const t = await res.text(); showMsg('shGroupMsg', t || 'Invalid request.', false); return; }
-                if (!res.ok) { showMsg('shGroupMsg', 'Could not share (' + res.status + ').', false); return; }
+                if (res.status === 400) { const msg = await res.text(); showMsg('shGroupMsg', msg || t('jsInvalidRequest'), false); return; }
+                if (!res.ok) { showMsg('shGroupMsg', t('jsCantShare', { code: res.status }), false); return; }
                 document.getElementById('shGroupEmails').value = '';
                 document.getElementById('shGroupName').value = '';
-                const emailNote = (emailLinks && mailEnabled) ? ' Emailing personal links now.' : '';
-                showMsg('shGroupMsg', 'Shared with ' + emails.length + ' recipient' + (emails.length === 1 ? '' : 's') + '.' + emailNote, true);
-                toast('File shared with group.');
+                const emailNote = (emailLinks && mailEnabled) ? t('jsEmailingLinks') : '';
+                const countMsg = emails.length === 1 ? t('jsSharedCount1') : t('jsSharedCountN', { count: emails.length });
+                showMsg('shGroupMsg', countMsg + emailNote, true);
+                toast(t('jsFileSharedGroup'));
                 loadShares();
             } catch (e) {
-                showMsg('shGroupMsg', 'Network error. Please try again.', false);
+                showMsg('shGroupMsg', t('jsNetError'), false);
             } finally { busy('shGroupBtn', false); }
         }
 
@@ -968,9 +1315,9 @@
             try {
                 const res = await fetch(API.files + '/shares/' + shareId + '/members', { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { toast('Could not export links.'); return; }
+                if (!res.ok) { toast(t('jsCantExport')); return; }
                 const members = await res.json();
-                if (!members.length) { toast('No recipients to export.'); return; }
+                if (!members.length) { toast(t('jsNoRecipients')); return; }
                 const origin = window.location.origin;
                 const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
                 const rows = [['email', 'link', 'opened_at', 'downloads']];
@@ -982,8 +1329,8 @@
                 a.href = url; a.download = 'recipient-links.csv';
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
-                toast('Exported ' + members.length + ' recipient link' + (members.length === 1 ? '' : 's') + '.');
-            } catch (e) { toast('Network error.'); }
+                toast(members.length === 1 ? t('jsExported1') : t('jsExportedN', { count: members.length }));
+            } catch (e) { toast(t('jsNetErrorShort')); }
         }
 
         async function loadShares() {
@@ -992,58 +1339,59 @@
             try {
                 const res = await fetch(API.files + '/' + shareFileId + '/shares', { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { list.innerHTML = '<div class="muted" style="font-size:13px;">Could not load shares.</div>'; return; }
+                if (!res.ok) { list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsCantLoadShares')}</div>`; return; }
 
                 const shares = await res.json();
                 if (!shares.length) {
-                    list.innerHTML = '<div class="muted" style="font-size:13px;">No active shares for this file.</div>';
+                    list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsNoActiveShares')}</div>`;
                     return;
                 }
+                const recipientsLabel = n => n === 1 ? t('jsRecipients1') : t('jsRecipientsN', { count: n });
                 list.innerHTML = shares.map(s => {
                     let title, meta, typeLabel;
                     if (s.type === 'LINK') {
-                        typeLabel = 'Link';
+                        typeLabel = t('tLink');
                         title = window.location.origin + s.url;
                         const bits = [];
-                        if (s.burnAfterAccess) bits.push(s.maxDownloads != null ? 'destroyed after ' + s.maxDownloads + ' downloads' : 'destroyed after one download');
-                        if (s.passwordProtected) bits.push('password');
-                        if (s.expiresAt) bits.push('expires ' + new Date(s.expiresAt).toLocaleString());
-                        if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' downloads');
-                        else if (!s.burnAfterAccess) bits.push(s.downloadCount + ' downloads');
+                        if (s.burnAfterAccess) bits.push(s.maxDownloads != null ? t('jsDestroyedAfterN', { n: s.maxDownloads }) : t('jsDestroyedAfterOne'));
+                        if (s.passwordProtected) bits.push(t('jsPassword'));
+                        if (s.expiresAt) bits.push(t('jsExpires', { date: fmtDateTime(s.expiresAt) }));
+                        if (s.maxDownloads != null) bits.push(s.downloadCount + '/' + s.maxDownloads + ' ' + t('downloadsWord'));
+                        else if (!s.burnAfterAccess) bits.push(s.downloadCount + ' ' + t('downloadsWord'));
                         meta = bits.join(' · ');
                     } else if (s.type === 'AUDIENCE') {
-                        typeLabel = 'Group';
-                        title = escapeHtml(s.audienceName || 'Group');
-                        const gbits = [(s.recipientCount != null ? s.recipientCount : 0) + ' recipient' + (s.recipientCount === 1 ? '' : 's')];
-                        if (s.burnMode === 'FIRST') gbits.push('destroyed after first open');
-                        else if (s.burnMode === 'ALL') gbits.push('destroyed after all open');
-                        if (s.expiresAt) gbits.push('expires ' + new Date(s.expiresAt).toLocaleString());
-                        gbits.push('shared ' + new Date(s.createdAt).toLocaleDateString());
+                        typeLabel = t('tGroup');
+                        title = escapeHtml(s.audienceName || t('tGroup'));
+                        const gbits = [recipientsLabel(s.recipientCount != null ? s.recipientCount : 0)];
+                        if (s.burnMode === 'FIRST') gbits.push(t('jsDestroyedFirst'));
+                        else if (s.burnMode === 'ALL') gbits.push(t('jsDestroyedAll'));
+                        if (s.expiresAt) gbits.push(t('jsExpires', { date: fmtDateTime(s.expiresAt) }));
+                        gbits.push(t('jsSharedOn', { date: fmtDate(s.createdAt) }));
                         meta = gbits.join(' · ');
                     } else {
-                        typeLabel = 'User';
+                        typeLabel = t('tUser');
                         title = escapeHtml(s.recipientEmail);
-                        const gbits = ['granted ' + new Date(s.createdAt).toLocaleDateString()];
-                        if (s.burnMode === 'FIRST') gbits.push('destroyed after first open');
-                        else if (s.burnMode === 'ALL') gbits.push('destroyed after all recipients open');
+                        const gbits = [t('jsGrantedOn', { date: fmtDate(s.createdAt) })];
+                        if (s.burnMode === 'FIRST') gbits.push(t('jsDestroyedFirst'));
+                        else if (s.burnMode === 'ALL') gbits.push(t('jsDestroyedAllRecipients'));
                         meta = gbits.join(' · ');
                     }
                     const burns = s.burnAfterAccess || (s.burnMode && s.burnMode !== 'NONE');
-                    const burnChip = burns ? '<span class="chip-burn">Burn</span>' : '';
-                    const notifyChip = s.notifyOnDownload ? '<span class="chip-type">Notify</span>' : '';
+                    const burnChip = burns ? `<span class="chip-burn">${t('chipBurn')}</span>` : '';
+                    const notifyChip = s.notifyOnDownload ? `<span class="chip-type">${t('chipNotify')}</span>` : '';
                     const exportBtn = s.type === 'AUDIENCE'
-                        ? `<button class="link" onclick="exportAudienceLinks('${s.id}')">Export links</button>` : '';
+                        ? `<button class="link" onclick="exportAudienceLinks('${s.id}')">${t('btnExportLinks')}</button>` : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
                                 <div class="si-title"><span class="chip-type">${typeLabel}</span>${burnChip}${notifyChip}${title}</div>
                                 <div class="si-meta">${meta}</div>
                             </div>
-                            <div class="si-actions">${exportBtn}<button class="link" onclick="revokeShare('${s.id}')">Revoke</button></div>
+                            <div class="si-actions">${exportBtn}<button class="link" onclick="revokeShare('${s.id}')">${t('btnRevoke')}</button></div>
                         </div>`;
                 }).join('');
             } catch (e) {
-                list.innerHTML = '<div class="muted" style="font-size:13px;">Network error.</div>';
+                list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsNetErrorShort')}</div>`;
             }
         }
 
@@ -1053,18 +1401,18 @@
             try {
                 const res = await fetch(API.files + '/' + fileId + '/downloads', { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { list.innerHTML = '<div class="muted" style="font-size:13px;">Could not load download history.</div>'; return; }
+                if (!res.ok) { list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsCantLoadDownloads')}</div>`; return; }
                 const events = await res.json();
                 if (!events.length) {
-                    list.innerHTML = '<div class="muted" style="font-size:13px;">No downloads yet.</div>';
+                    list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsNoDownloads')}</div>`;
                     return;
                 }
-                const label = { LINK: 'Link', USER: 'User', AUDIENCE: 'Group' };
+                const label = { LINK: t('tLink'), USER: t('tUser'), AUDIENCE: t('tGroup') };
                 list.innerHTML = events.map(e => {
-                    const who = e.downloaderEmail ? escapeHtml(e.downloaderEmail) : 'Anonymous link';
-                    const bits = [new Date(e.downloadedAt).toLocaleString()];
+                    const who = e.downloaderEmail ? escapeHtml(e.downloaderEmail) : t('jsAnonLink');
+                    const bits = [fmtDateTime(e.downloadedAt)];
                     if (e.ipAddress) bits.push('IP ' + escapeHtml(e.ipAddress));
-                    const burnedTag = e.burned ? '<span class="chip-burn">Burned</span>' : '';
+                    const burnedTag = e.burned ? `<span class="chip-burn">${t('chipBurned')}</span>` : '';
                     return `
                         <div class="share-item">
                             <div class="si-main">
@@ -1074,18 +1422,18 @@
                         </div>`;
                 }).join('');
             } catch (e) {
-                list.innerHTML = '<div class="muted" style="font-size:13px;">Network error.</div>';
+                list.innerHTML = `<div class="muted" style="font-size:13px;">${t('jsNetErrorShort')}</div>`;
             }
         }
 
         async function revokeShare(shareId) {
-            if (!confirm('Revoke this share? The recipient or link will stop working.')) return;
+            if (!confirm(t('jsConfirmRevoke'))) return;
             try {
                 const res = await fetch(API.files + '/shares/' + shareId, { method: 'DELETE', headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 204) { toast('Share revoked.'); loadShares(); }
-                else toast('Revoke failed.');
-            } catch (e) { toast('Revoke error.'); }
+                if (res.status === 204) { toast(t('jsShareRevoked')); loadShares(); }
+                else toast(t('jsRevokeFailed'));
+            } catch (e) { toast(t('jsRevokeError')); }
         }
 
         async function loadAllFiles() {
@@ -1094,18 +1442,18 @@
             try {
                 const res = await fetch(API.files + '/all', { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 403) { list.innerHTML = '<div class="empty">Admin role required.</div>'; return; }
-                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load files.</div>'; return; }
+                if (res.status === 403) { list.innerHTML = `<div class="empty">${t('jsAdminRequired')}</div>`; return; }
+                if (!res.ok) { list.innerHTML = `<div class="empty">${t('jsCantLoadFiles')}</div>`; return; }
 
                 const files = await res.json();
                 if (!files.length) {
-                    list.innerHTML = '<div class="empty">No files in the system yet.</div>';
+                    list.innerHTML = `<div class="empty">${t('jsNoFilesSystem')}</div>`;
                     return;
                 }
                 list.innerHTML = `
                     <table class="files">
                         <thead>
-                            <tr><th>Name</th><th class="col-meta">Type</th><th class="col-meta">Size</th><th class="col-meta">Uploaded</th></tr>
+                            <tr><th>${t('thName')}</th><th class="col-meta">${t('thType')}</th><th class="col-meta">${t('thSize')}</th><th class="col-meta">${t('thUploaded')}</th></tr>
                         </thead>
                         <tbody>
                             ${files.map(f => `
@@ -1118,13 +1466,13 @@
                                     </td>
                                     <td class="muted">${escapeHtml(f.contentType || '—')}</td>
                                     <td class="muted">${formatSize(f.sizeBytes)}</td>
-                                    <td class="muted">${new Date(f.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                    <td class="muted">${fmtDate(f.createdAt)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>`;
             } catch (e) {
-                list.innerHTML = '<div class="empty">Network error.</div>';
+                list.innerHTML = `<div class="empty">${t('jsNetErrorShort')}</div>`;
             }
         }
 
@@ -1134,7 +1482,7 @@
             try {
                 const res = await fetch(API.files, { headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (!res.ok) { list.innerHTML = '<div class="empty">Could not load files.</div>'; return; }
+                if (!res.ok) { list.innerHTML = `<div class="empty">${t('jsCantLoadFiles')}</div>`; return; }
 
                 const files = await res.json();
                 currentFiles = files;
@@ -1150,7 +1498,7 @@
                                     <path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
                                 </svg>
                             </div>
-                            No files yet. Upload your first file above.
+                            ${t('jsNoFilesYet')}
                         </div>`;
                     return;
                 }
@@ -1159,9 +1507,9 @@
                     <table class="files">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th class="col-meta">Size</th>
-                                <th class="col-meta">Uploaded</th>
+                                <th>${t('thName')}</th>
+                                <th class="col-meta">${t('thSize')}</th>
+                                <th class="col-meta">${t('thUploaded')}</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -1172,22 +1520,22 @@
                                         <div class="fcell">
                                             <div class="ftag">${fileTag(f.name)}</div>
                                             <div class="fname-cell" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
-                                            ${f.scanStatus === 'CLEAN' ? '<span class="scan-badge" title="Scanned on upload — no malware detected">🛡 Clean</span>' : ''}
+                                            ${f.scanStatus === 'CLEAN' ? `<span class="scan-badge" title="${t('scanCleanTitle')}">${t('scanClean')}</span>` : ''}
                                         </div>
                                     </td>
                                     <td class="muted">${formatSize(f.sizeBytes)}</td>
-                                    <td class="muted">${new Date(f.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                                    <td class="muted">${fmtDate(f.createdAt)}</td>
                                     <td class="col-actions">
-                                        <button class="secondary sm" onclick="downloadFile('${f.id}')">Download</button>
-                                        <button class="secondary sm" onclick="openShareModal('${f.id}')">Share</button>
-                                        <button class="link" onclick="deleteFile('${f.id}')">Delete</button>
+                                        <button class="secondary sm" onclick="downloadFile('${f.id}')">${t('btnDownload')}</button>
+                                        <button class="secondary sm" onclick="openShareModal('${f.id}')">${t('btnShare')}</button>
+                                        <button class="link" onclick="deleteFile('${f.id}')">${t('btnDelete')}</button>
                                     </td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>`;
             } catch (e) {
-                list.innerHTML = '<div class="empty">Network error.</div>';
+                list.innerHTML = `<div class="empty">${t('jsNetErrorShort')}</div>`;
             }
         }
 
@@ -1232,7 +1580,7 @@
 
         async function uploadFile() {
             if (!selectedFile) return;
-            if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
+            if (selectedFile.size > 50 * 1024 * 1024) return showMsg('uploadMsg', t('jsTooLarge'), false);
 
             const formData = new FormData();
             formData.append('file', selectedFile);
@@ -1242,8 +1590,8 @@
             // Staged animation runs alongside the single upload+scan request. The stages are
             // paced so the "scanning" step is always visible even when the server is fast.
             const started = Date.now();
-            upStage('Uploading file…');
-            const toScan = setTimeout(() => upStage('Scanning for malware…'), 650);
+            upStage(t('upUploading'));
+            const toScan = setTimeout(() => upStage(t('upScanning')), 650);
 
             try {
                 const res = await fetch(API.upload, { method: 'POST', headers: authHeaders(), body: formData });
@@ -1251,34 +1599,34 @@
                 if (res.status === 401) { logout(); return; }
 
                 // Keep the scanning stage on screen briefly so the animation reads clearly.
-                upStage('Scanning for malware…');
+                upStage(t('upScanning'));
                 const elapsed = Date.now() - started;
                 if (elapsed < 1200) await sleep(1200 - elapsed);
 
                 if (res.ok) {
-                    upResult('done', '✓', 'Clean');
+                    upResult('done', '✓', t('upClean'));
                     clearSelection();
-                    toast('File uploaded.');
+                    toast(t('jsFileUploaded'));
                     await loadFiles();
                     await sleep(1400);
                     upHide();
                 } else if (res.status === 422) {
-                    upResult('failed', '✕', 'Malware detected. Upload blocked.');
+                    upResult('failed', '✕', t('upMalware'));
                 } else if (res.status === 400) {
                     upHide();
-                    showMsg('uploadMsg', 'Upload rejected: file type not allowed or file is empty.', false);
+                    showMsg('uploadMsg', t('jsUploadRejected'), false);
                 } else if (res.status === 413) {
                     upHide();
-                    showMsg('uploadMsg', 'File is too large (max 50 MB).', false);
+                    showMsg('uploadMsg', t('jsTooLarge'), false);
                 } else {
                     upHide();
                     const err = await res.text();
-                    showMsg('uploadMsg', 'Upload failed: ' + (err || res.status), false);
+                    showMsg('uploadMsg', t('jsUploadFailed', { detail: err || res.status }), false);
                 }
             } catch (e) {
                 clearTimeout(toScan);
                 upHide();
-                showMsg('uploadMsg', 'Network error. Please try again.', false);
+                showMsg('uploadMsg', t('jsNetError'), false);
             } finally { busy('uploadBtn', false); }
         }
 
@@ -1287,24 +1635,24 @@
             const name = meta ? meta.name : 'download';
             try {
                 const res = await fetch(API.files + '/' + id, { headers: authHeaders() });
-                if (!res.ok) { toast('Download failed.'); return; }
+                if (!res.ok) { toast(t('jsDownloadFailed')); return; }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = name;
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
-            } catch (e) { toast('Download error.'); }
+            } catch (e) { toast(t('jsDownloadError')); }
         }
 
         async function deleteFile(id) {
-            if (!confirm('Delete this file permanently?')) return;
+            if (!confirm(t('jsConfirmDelete'))) return;
             try {
                 const res = await fetch(API.files + '/' + id, { method: 'DELETE', headers: authHeaders() });
                 if (res.status === 401) { logout(); return; }
-                if (res.status === 204) { toast('File deleted.'); await loadFiles(); }
-                else toast('Delete failed.');
-            } catch (e) { toast('Delete error.'); }
+                if (res.status === 204) { toast(t('jsFileDeleted')); await loadFiles(); }
+                else toast(t('jsDeleteFailed'));
+            } catch (e) { toast(t('jsDeleteError')); }
         }
 
         const dz = document.getElementById('dropzone');
@@ -1313,6 +1661,7 @@
         ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
         dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) chooseFile(e.dataTransfer.files[0]); });
 
+        I18N.apply();
         if (token) enterApp();
     </script>
 </body>

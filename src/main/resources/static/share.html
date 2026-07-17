@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecShare — Download shared file</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="/i18n.js"></script>
     <style>
         :root {
             --accent: #7c3aed; --accent-hover: #6d28d9; --accent-soft: #f1ecfe;
@@ -45,6 +46,12 @@
             padding: 16px 24px; border-bottom: 1px solid var(--border); letter-spacing: -0.01em;
         }
         .brand svg { color: var(--accent); }
+        .lang-toggle {
+            margin-left: auto; width: auto; margin-top: 0;
+            background: none; color: var(--text-muted); border: 1px solid var(--border-strong);
+            padding: 4px 10px; font-size: 12px; font-weight: 650; border-radius: 5px; letter-spacing: .03em;
+        }
+        .lang-toggle:hover { background: var(--surface-2); color: var(--text); }
         .body { padding: 28px 24px; }
         .file-icon {
             width: 52px; height: 52px; border-radius: 10px; margin: 0 auto 16px;
@@ -89,13 +96,14 @@
                 <path d="M9 12l2 2 4-4"/>
             </svg>
             SecShare
+            <button class="lang-toggle" data-lang-toggle onclick="I18N.toggle()">TR</button>
         </div>
         <div class="body">
-            <div id="loading" class="state"><span class="spinner"></span> Loading…</div>
+            <div id="loading" class="state"><span class="spinner"></span> <span data-i18n="loading">Loading…</span></div>
 
             <div id="unavailable" class="hidden">
                 <div class="state" id="unavailableMsg">This link is not available.</div>
-                <div class="foot"><a href="/">Go to SecShare</a></div>
+                <div class="foot"><a href="/" data-i18n="goToApp">Go to SecShare</a></div>
             </div>
 
             <div id="fileView" class="hidden">
@@ -109,24 +117,69 @@
                 <div class="sub" id="fileMeta"></div>
 
                 <div class="field hidden" id="passwordField">
-                    <label>This file is password protected</label>
-                    <input type="password" id="password" placeholder="Enter password"
+                    <label data-i18n="pwProtected">This file is password protected</label>
+                    <input type="password" id="password" placeholder="Enter password" data-i18n-ph="pwEnter"
                            onkeydown="if(event.key==='Enter') download()">
                 </div>
 
-                <button id="downloadBtn" onclick="download()">Download</button>
+                <button id="downloadBtn" onclick="download()" data-i18n="download">Download</button>
                 <div id="msg" class="msg"></div>
-                <div class="foot"><a href="/">Powered by SecShare</a></div>
+                <div class="foot"><a href="/" data-i18n="poweredBy">Powered by SecShare</a></div>
             </div>
         </div>
     </div>
 
     <script>
+        I18N.register({
+            en: {
+                _title: 'SecShare — Download shared file',
+                loading: 'Loading…',
+                goToApp: 'Go to SecShare',
+                pwProtected: 'This file is password protected',
+                pwEnter: 'Enter password',
+                download: 'Download',
+                poweredBy: 'Powered by SecShare',
+                invalidLink: 'Invalid link.',
+                linkNotExist: 'This link does not exist.',
+                linkUnavailable: 'This link is not available.',
+                linkExpired: 'This link has expired or is no longer available.',
+                netError: 'Network error. Please try again.',
+                enterPw: 'Please enter the password.',
+                wrongPw: 'Incorrect password.',
+                linkGone: 'This link is no longer available.',
+                downloadFailed: 'Download failed ({code}).',
+                downloadStarted: 'Download started.'
+            },
+            tr: {
+                _title: 'SecShare — Paylaşılan dosyayı indir',
+                loading: 'Yükleniyor…',
+                goToApp: 'SecShare\'e git',
+                pwProtected: 'Bu dosya parola korumalı',
+                pwEnter: 'Parolayı girin',
+                download: 'İndir',
+                poweredBy: 'SecShare ile sunulur',
+                invalidLink: 'Geçersiz bağlantı.',
+                linkNotExist: 'Bu bağlantı mevcut değil.',
+                linkUnavailable: 'Bu bağlantı kullanılamıyor.',
+                linkExpired: 'Bu bağlantının süresi dolmuş veya artık kullanılamıyor.',
+                netError: 'Ağ hatası. Lütfen tekrar deneyin.',
+                enterPw: 'Lütfen parolayı girin.',
+                wrongPw: 'Parola yanlış.',
+                linkGone: 'Bu bağlantı artık kullanılamıyor.',
+                downloadFailed: 'İndirme başarısız ({code}).',
+                downloadStarted: 'İndirme başladı.'
+            }
+        });
+
         const _p = window.location.pathname;
         const token = _p.startsWith('/s/')
             ? decodeURIComponent(_p.slice(3))
             : new URLSearchParams(window.location.search).get('t');
         let needsPassword = false;
+
+        // Remembered so the language toggle can re-translate whatever is on screen.
+        let unavailKey = null;
+        let msgKey = null, msgVars = null, msgOk = false;
 
         function formatSize(bytes) {
             if (!bytes) return '0 B';
@@ -136,26 +189,33 @@
         }
         function show(id) { document.getElementById(id).classList.remove('hidden'); }
         function hide(id) { document.getElementById(id).classList.add('hidden'); }
-        function showMsg(text, ok) {
+        function showMsg(key, ok, vars) {
+            msgKey = key; msgOk = ok; msgVars = vars || null;
             const el = document.getElementById('msg');
-            el.textContent = text;
+            el.textContent = I18N.t(key, vars);
             el.className = 'msg ' + (ok ? 'success' : 'error');
         }
 
-        function unavailable(text) {
+        function unavailable(key) {
+            unavailKey = key;
             hide('loading'); hide('fileView');
-            document.getElementById('unavailableMsg').textContent = text;
+            document.getElementById('unavailableMsg').textContent = I18N.t(key);
             show('unavailable');
         }
 
+        window.onLangChange = function () {
+            if (unavailKey) document.getElementById('unavailableMsg').textContent = I18N.t(unavailKey);
+            if (msgKey) document.getElementById('msg').textContent = I18N.t(msgKey, msgVars);
+        };
+
         async function loadMeta() {
-            if (!token) { unavailable('Invalid link.'); return; }
+            if (!token) { unavailable('invalidLink'); return; }
             try {
                 const res = await fetch('/api/public/shares/' + encodeURIComponent(token));
-                if (res.status === 404) { unavailable('This link does not exist.'); return; }
-                if (!res.ok) { unavailable('This link is not available.'); return; }
+                if (res.status === 404) { unavailable('linkNotExist'); return; }
+                if (!res.ok) { unavailable('linkUnavailable'); return; }
                 const meta = await res.json();
-                if (!meta.available) { unavailable('This link has expired or is no longer available.'); return; }
+                if (!meta.available) { unavailable('linkExpired'); return; }
 
                 document.getElementById('fileName').textContent = meta.fileName;
                 document.getElementById('fileMeta').textContent =
@@ -165,27 +225,27 @@
 
                 hide('loading'); show('fileView');
             } catch (e) {
-                unavailable('Network error. Please try again.');
+                unavailable('netError');
             }
         }
 
         async function download() {
             const btn = document.getElementById('downloadBtn');
             const password = document.getElementById('password').value;
-            if (needsPassword && !password) return showMsg('Please enter the password.', false);
+            if (needsPassword && !password) return showMsg('enterPw', false);
 
             btn.disabled = true;
-            const label = btn.textContent; btn.innerHTML = '<span class="spinner"></span>';
+            btn.innerHTML = '<span class="spinner"></span>';
             try {
                 const res = await fetch('/api/public/shares/' + encodeURIComponent(token) + '/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password })
                 });
-                if (res.status === 401) { showMsg('Incorrect password.', false); return; }
-                if (res.status === 410) { showMsg('This link is no longer available.', false); return; }
-                if (res.status === 404) { showMsg('This link does not exist.', false); return; }
-                if (!res.ok) { showMsg('Download failed (' + res.status + ').', false); return; }
+                if (res.status === 401) { showMsg('wrongPw', false); return; }
+                if (res.status === 410) { showMsg('linkGone', false); return; }
+                if (res.status === 404) { showMsg('linkNotExist', false); return; }
+                if (!res.ok) { showMsg('downloadFailed', false, { code: res.status }); return; }
 
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
@@ -193,14 +253,15 @@
                 a.href = url; a.download = document.getElementById('fileName').textContent;
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
-                showMsg('Download started.', true);
+                showMsg('downloadStarted', true);
             } catch (e) {
-                showMsg('Network error. Please try again.', false);
+                showMsg('netError', false);
             } finally {
-                btn.disabled = false; btn.textContent = label;
+                btn.disabled = false; btn.textContent = I18N.t('download');
             }
         }
 
+        I18N.apply();
         loadMeta();
     </script>
 </body>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecShare — Usage Guide</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="/i18n.js"></script>
     <style>
         :root {
             --accent: #7c3aed;
@@ -57,6 +58,13 @@
         .brand svg { color: var(--accent); }
         .header a.back { color: var(--text-muted); font-size: 14px; font-weight: 500; }
         .header a.back:hover { color: var(--text); text-decoration: none; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .lang-toggle {
+            background: none; color: var(--text-muted); border: 1px solid var(--border-strong);
+            padding: 4px 10px; font-size: 12px; font-weight: 650; border-radius: 5px;
+            letter-spacing: .03em; cursor: pointer; font-family: inherit;
+        }
+        .lang-toggle:hover { background: var(--surface-2); color: var(--text); }
 
         .layout { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; display: grid; grid-template-columns: 200px 1fr; gap: 48px; }
         @media (max-width: 820px) { .layout { grid-template-columns: 1fr; gap: 24px; } .toc { display: none; } }
@@ -117,152 +125,309 @@
                 </svg>
                 SecShare
             </div>
-            <a class="back" href="/">&larr; Back to app</a>
+            <div class="header-right">
+                <button class="lang-toggle" data-lang-toggle onclick="I18N.toggle()">TR</button>
+                <a class="back" href="/" data-i18n-html="backToApp">&larr; Back to app</a>
+            </div>
         </div>
     </header>
 
     <div class="layout">
         <nav class="toc">
-            <h4>On this page</h4>
-            <a href="#overview">Overview</a>
-            <a href="#who">Who it's for</a>
-            <a href="#getting-started">Getting started</a>
-            <a href="#auth">Authentication</a>
-            <a href="#files">Working with files</a>
-            <a href="#reference">API reference</a>
-            <a href="#limits">Limits &amp; rules</a>
-            <a href="#faq">FAQ</a>
+            <h4 data-i18n="tocTitle">On this page</h4>
+            <a href="#overview" data-i18n="tocOverview">Overview</a>
+            <a href="#who" data-i18n="tocWho">Who it's for</a>
+            <a href="#getting-started" data-i18n="tocStart">Getting started</a>
+            <a href="#auth" data-i18n="tocAuth">Authentication</a>
+            <a href="#files" data-i18n="tocFiles">Working with files</a>
+            <a href="#reference" data-i18n="tocRef">API reference</a>
+            <a href="#limits" data-i18n-html="tocLimits">Limits &amp; rules</a>
+            <a href="#faq" data-i18n="tocFaq">FAQ</a>
         </nav>
 
         <article class="content">
-            <h1>Usage Guide</h1>
-            <p class="lead">Everything you need to understand what SecShare is, what it's for, and how to use it &mdash; from the web app or directly against the API.</p>
+            <h1 data-i18n="h1">Usage Guide</h1>
+            <p class="lead" data-i18n-html="lead">Everything you need to understand what SecShare is, what it's for, and how to use it &mdash; from the web app or directly against the API.</p>
 
             <section id="overview">
-                <h2>Overview</h2>
-                <p><strong>SecShare</strong> is a self-hosted, authenticated file-sharing service. It gives each user a private space to store and retrieve files through a simple REST API and a lightweight web interface.</p>
-                <p>The core idea is <em>ownership isolation</em>: when you upload a file it belongs to your account only. No other user can list, download, or delete it. Every request that touches files must carry a valid access token, so files are never exposed anonymously.</p>
-                <div class="callout">
+                <h2 data-i18n="overviewH">Overview</h2>
+                <p data-i18n-html="overviewP1"><strong>SecShare</strong> is a self-hosted, authenticated file-sharing service. It gives each user a private space to store and retrieve files through a simple REST API and a lightweight web interface.</p>
+                <p data-i18n-html="overviewP2">The core idea is <em>ownership isolation</em>: when you upload a file it belongs to your account only. No other user can list, download, or delete it. Every request that touches files must carry a valid access token, so files are never exposed anonymously.</p>
+                <div class="callout" data-i18n-html="overviewCallout">
                     <strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a> &mdash; useful for scripts, integrations, and quick reference.
                 </div>
             </section>
 
             <section id="who">
-                <h2>Who it's for</h2>
+                <h2 data-i18n="whoH">Who it's for</h2>
                 <ul>
-                    <li><strong>Individuals</strong> who want a private, no-frills place to keep documents accessible from anywhere.</li>
-                    <li><strong>Small teams</strong> that need each member to hold their own set of files behind a login.</li>
-                    <li><strong>Developers</strong> who want a clean REST backend to build on, or to use as a reference for JWT-secured file handling.</li>
-                    <li><strong>Learning &amp; security testing</strong>, where a compact, self-contained upload/download service is useful to study.</li>
+                    <li data-i18n-html="whoLi1"><strong>Individuals</strong> who want a private, no-frills place to keep documents accessible from anywhere.</li>
+                    <li data-i18n-html="whoLi2"><strong>Small teams</strong> that need each member to hold their own set of files behind a login.</li>
+                    <li data-i18n-html="whoLi3"><strong>Developers</strong> who want a clean REST backend to build on, or to use as a reference for JWT-secured file handling.</li>
+                    <li data-i18n-html="whoLi4"><strong>Learning &amp; security testing</strong>, where a compact, self-contained upload/download service is useful to study.</li>
                 </ul>
             </section>
 
             <section id="getting-started">
-                <h2>Getting started</h2>
+                <h2 data-i18n="startH">Getting started</h2>
                 <ol>
-                    <li>Open the <a href="/">home page</a> and choose <strong>Create account</strong>.</li>
-                    <li>Enter your email and a password of at least 8 characters, then submit.</li>
-                    <li>Switch to <strong>Sign in</strong> and log in with the same credentials.</li>
-                    <li>You'll land on your dashboard, where you can upload files and see your storage usage.</li>
+                    <li data-i18n-html="startLi1">Open the <a href="/">home page</a> and choose <strong>Create account</strong>.</li>
+                    <li data-i18n-html="startLi2">Enter your email and a password of at least 8 characters, then submit.</li>
+                    <li data-i18n-html="startLi3">Switch to <strong>Sign in</strong> and log in with the same credentials.</li>
+                    <li data-i18n-html="startLi4">You'll land on your dashboard, where you can upload files and see your storage usage.</li>
                 </ol>
-                <p>The web app keeps you signed in across page reloads by storing your access token in the browser. Use <strong>Sign out</strong> to clear it.</p>
+                <p data-i18n-html="startP">The web app keeps you signed in across page reloads by storing your access token in the browser. Use <strong>Sign out</strong> to clear it.</p>
             </section>
 
             <section id="auth">
-                <h2>Authentication</h2>
-                <p>SecShare uses <strong>JWT bearer tokens</strong>. You obtain a token by logging in, then attach it to every protected request.</p>
+                <h2 data-i18n="authH">Authentication</h2>
+                <p data-i18n-html="authP">SecShare uses <strong>JWT bearer tokens</strong>. You obtain a token by logging in, then attach it to every protected request.</p>
 
-                <h3>1. Register</h3>
+                <h3 data-i18n="authH1">1. Register</h3>
 <pre>curl -X POST https://your-host/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"supersecret"}'</pre>
 
-                <h3>2. Log in and capture the token</h3>
+                <h3 data-i18n="authH2">2. Log in and capture the token</h3>
 <pre>curl -X POST https://your-host/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"supersecret"}'
 
 # → { "accessToken": "eyJhbGciOi..." }</pre>
 
-                <h3>3. Call a protected endpoint</h3>
+                <h3 data-i18n="authH3">3. Call a protected endpoint</h3>
 <pre>curl https://your-host/api/auth/me \
   -H "Authorization: Bearer eyJhbGciOi..."</pre>
 
-                <div class="callout">
+                <div class="callout" data-i18n-html="authCallout">
                     <strong>Token lifetime.</strong> Access tokens expire after <strong>60 minutes</strong>. When a token expires the API returns <code>401 Unauthorized</code>; simply log in again to get a new one. The web app signs you out automatically when this happens.
                 </div>
             </section>
 
             <section id="files">
-                <h2>Working with files</h2>
+                <h2 data-i18n="filesH">Working with files</h2>
 
-                <h3>Upload</h3>
-                <p>Send the file as multipart form data under the field name <code>file</code>:</p>
+                <h3 data-i18n="filesUploadH">Upload</h3>
+                <p data-i18n-html="filesUploadP">Send the file as multipart form data under the field name <code>file</code>:</p>
 <pre>curl -X POST https://your-host/api/files/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@/path/to/report.pdf"</pre>
-                <p>The response contains the stored file's <code>id</code>, name, size, content type, and creation time.</p>
+                <p data-i18n-html="filesUploadP2">The response contains the stored file's <code>id</code>, name, size, content type, and creation time.</p>
 
-                <h3>List your files</h3>
+                <h3 data-i18n="filesListH">List your files</h3>
 <pre>curl https://your-host/api/files \
   -H "Authorization: Bearer $TOKEN"</pre>
 
-                <h3>Download</h3>
+                <h3 data-i18n="filesDownloadH">Download</h3>
 <pre>curl https://your-host/api/files/&lt;id&gt; \
   -H "Authorization: Bearer $TOKEN" -O -J</pre>
 
-                <h3>Delete</h3>
+                <h3 data-i18n="filesDeleteH">Delete</h3>
 <pre>curl -X DELETE https://your-host/api/files/&lt;id&gt; \
   -H "Authorization: Bearer $TOKEN"</pre>
-                <p>Deletion is permanent and only works on files you own; requesting someone else's file returns <code>403 Forbidden</code>.</p>
+                <p data-i18n-html="filesDeleteP">Deletion is permanent and only works on files you own; requesting someone else's file returns <code>403 Forbidden</code>.</p>
             </section>
 
             <section id="reference">
-                <h2>API reference</h2>
+                <h2 data-i18n="refH">API reference</h2>
                 <table class="api">
                     <thead>
-                        <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+                        <tr><th data-i18n="refMethod">Method</th><th data-i18n="refPath">Path</th><th data-i18n="refAuth">Auth</th><th data-i18n="refDesc">Description</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td><span class="lock">Public</span></td><td>Create a new account.</td></tr>
-                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/login</code></td><td><span class="lock">Public</span></td><td>Exchange credentials for a JWT.</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/me</code></td><td>&#128274; Bearer</td><td>Current user's profile.</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files</code></td><td>&#128274; Bearer</td><td>List your files.</td></tr>
-                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/files/upload</code></td><td>&#128274; Bearer</td><td>Upload a file.</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td>Download a file you own.</td></tr>
-                        <tr><td><span class="method m-del">DELETE</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td>Delete a file you own.</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/all</code></td><td>&#128274; Admin</td><td>List all files (ADMIN only).</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/info</code></td><td><span class="lock">Public</span></td><td>Machine-readable usage guide.</td></tr>
-                        <tr><td><span class="method m-get">GET</span></td><td><code>/health</code></td><td><span class="lock">Public</span></td><td>Liveness check.</td></tr>
+                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/register</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD1">Create a new account.</td></tr>
+                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/auth/login</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD2">Exchange credentials for a JWT.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/auth/me</code></td><td>&#128274; Bearer</td><td data-i18n="refD3">Current user's profile.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files</code></td><td>&#128274; Bearer</td><td data-i18n="refD4">List your files.</td></tr>
+                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/files/upload</code></td><td>&#128274; Bearer</td><td data-i18n="refD5">Upload a file.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td data-i18n="refD6">Download a file you own.</td></tr>
+                        <tr><td><span class="method m-del">DELETE</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td data-i18n="refD7">Delete a file you own.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/all</code></td><td>&#128274; Admin</td><td data-i18n="refD8">List all files (ADMIN only).</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/info</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD9">Machine-readable usage guide.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/health</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD10">Liveness check.</td></tr>
                     </tbody>
                 </table>
             </section>
 
             <section id="limits">
-                <h2>Limits &amp; rules</h2>
+                <h2 data-i18n-html="limitsH">Limits &amp; rules</h2>
                 <ul>
-                    <li><strong>Maximum file size:</strong> 50 MB per file.</li>
-                    <li><strong>Allowed types:</strong> <code>pdf</code>, <code>png</code>, <code>jpg</code>, <code>jpeg</code>, <code>txt</code>, <code>doc</code>, <code>docx</code>, <code>xlsx</code>, <code>zip</code>.</li>
-                    <li><strong>Password:</strong> minimum 8 characters at registration.</li>
-                    <li><strong>Isolation:</strong> you can only access files owned by your account.</li>
+                    <li data-i18n-html="limitsLi1"><strong>Maximum file size:</strong> 50 MB per file.</li>
+                    <li data-i18n-html="limitsLi2"><strong>Allowed types:</strong> <code>pdf</code>, <code>png</code>, <code>jpg</code>, <code>jpeg</code>, <code>txt</code>, <code>doc</code>, <code>docx</code>, <code>xlsx</code>, <code>zip</code>.</li>
+                    <li data-i18n-html="limitsLi3"><strong>Password:</strong> minimum 8 characters at registration.</li>
+                    <li data-i18n-html="limitsLi4"><strong>Isolation:</strong> you can only access files owned by your account.</li>
                 </ul>
             </section>
 
             <section id="faq">
-                <h2>FAQ</h2>
-                <h3>Can other people see my files?</h3>
-                <p>No. Files are scoped to the account that uploaded them. Only an administrator role can list files across all users.</p>
+                <h2 data-i18n="faqH">FAQ</h2>
+                <h3 data-i18n="faqQ1">Can other people see my files?</h3>
+                <p data-i18n-html="faqA1">No. Files are scoped to the account that uploaded them. Only an administrator role can list files across all users.</p>
 
-                <h3>What happens when my token expires?</h3>
-                <p>Protected requests start returning <code>401 Unauthorized</code>. Log in again to obtain a fresh token; the web app does this transition for you by signing you out.</p>
+                <h3 data-i18n="faqQ2">What happens when my token expires?</h3>
+                <p data-i18n-html="faqA2">Protected requests start returning <code>401 Unauthorized</code>. Log in again to obtain a fresh token; the web app does this transition for you by signing you out.</p>
 
-                <h3>Why was my upload rejected?</h3>
-                <p>The most common reasons are an unsupported file extension or a file larger than 50 MB. The API responds with <code>400 Bad Request</code> or <code>413 Payload Too Large</code> and a short message explaining which rule was violated.</p>
+                <h3 data-i18n="faqQ3">Why was my upload rejected?</h3>
+                <p data-i18n-html="faqA3">The most common reasons are an unsupported file extension or a file larger than 50 MB. The API responds with <code>400 Bad Request</code> or <code>413 Payload Too Large</code> and a short message explaining which rule was violated.</p>
 
-                <h3>Is there a programmatic list of endpoints?</h3>
-                <p>Yes &mdash; call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.</p>
+                <h3 data-i18n="faqQ4">Is there a programmatic list of endpoints?</h3>
+                <p data-i18n-html="faqA4">Yes &mdash; call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.</p>
             </section>
         </article>
     </div>
+
+    <script>
+        I18N.register({
+            en: {
+                _title: 'SecShare — Usage Guide',
+                backToApp: '&larr; Back to app',
+                tocTitle: 'On this page',
+                tocOverview: 'Overview',
+                tocWho: "Who it's for",
+                tocStart: 'Getting started',
+                tocAuth: 'Authentication',
+                tocFiles: 'Working with files',
+                tocRef: 'API reference',
+                tocLimits: 'Limits &amp; rules',
+                tocFaq: 'FAQ',
+                h1: 'Usage Guide',
+                lead: "Everything you need to understand what SecShare is, what it's for, and how to use it &mdash; from the web app or directly against the API.",
+                overviewH: 'Overview',
+                overviewP1: '<strong>SecShare</strong> is a self-hosted, authenticated file-sharing service. It gives each user a private space to store and retrieve files through a simple REST API and a lightweight web interface.',
+                overviewP2: 'The core idea is <em>ownership isolation</em>: when you upload a file it belongs to your account only. No other user can list, download, or delete it. Every request that touches files must carry a valid access token, so files are never exposed anonymously.',
+                overviewCallout: '<strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a> &mdash; useful for scripts, integrations, and quick reference.',
+                whoH: "Who it's for",
+                whoLi1: '<strong>Individuals</strong> who want a private, no-frills place to keep documents accessible from anywhere.',
+                whoLi2: '<strong>Small teams</strong> that need each member to hold their own set of files behind a login.',
+                whoLi3: '<strong>Developers</strong> who want a clean REST backend to build on, or to use as a reference for JWT-secured file handling.',
+                whoLi4: '<strong>Learning &amp; security testing</strong>, where a compact, self-contained upload/download service is useful to study.',
+                startH: 'Getting started',
+                startLi1: 'Open the <a href="/">home page</a> and choose <strong>Create account</strong>.',
+                startLi2: 'Enter your email and a password of at least 8 characters, then submit.',
+                startLi3: 'Switch to <strong>Sign in</strong> and log in with the same credentials.',
+                startLi4: "You'll land on your dashboard, where you can upload files and see your storage usage.",
+                startP: 'The web app keeps you signed in across page reloads by storing your access token in the browser. Use <strong>Sign out</strong> to clear it.',
+                authH: 'Authentication',
+                authP: 'SecShare uses <strong>JWT bearer tokens</strong>. You obtain a token by logging in, then attach it to every protected request.',
+                authH1: '1. Register',
+                authH2: '2. Log in and capture the token',
+                authH3: '3. Call a protected endpoint',
+                authCallout: '<strong>Token lifetime.</strong> Access tokens expire after <strong>60 minutes</strong>. When a token expires the API returns <code>401 Unauthorized</code>; simply log in again to get a new one. The web app signs you out automatically when this happens.',
+                filesH: 'Working with files',
+                filesUploadH: 'Upload',
+                filesUploadP: 'Send the file as multipart form data under the field name <code>file</code>:',
+                filesUploadP2: "The response contains the stored file's <code>id</code>, name, size, content type, and creation time.",
+                filesListH: 'List your files',
+                filesDownloadH: 'Download',
+                filesDeleteH: 'Delete',
+                filesDeleteP: "Deletion is permanent and only works on files you own; requesting someone else's file returns <code>403 Forbidden</code>.",
+                refH: 'API reference',
+                refMethod: 'Method',
+                refPath: 'Path',
+                refAuth: 'Auth',
+                refDesc: 'Description',
+                refPublic: 'Public',
+                refD1: 'Create a new account.',
+                refD2: 'Exchange credentials for a JWT.',
+                refD3: "Current user's profile.",
+                refD4: 'List your files.',
+                refD5: 'Upload a file.',
+                refD6: 'Download a file you own.',
+                refD7: 'Delete a file you own.',
+                refD8: 'List all files (ADMIN only).',
+                refD9: 'Machine-readable usage guide.',
+                refD10: 'Liveness check.',
+                limitsH: 'Limits &amp; rules',
+                limitsLi1: '<strong>Maximum file size:</strong> 50 MB per file.',
+                limitsLi2: '<strong>Allowed types:</strong> <code>pdf</code>, <code>png</code>, <code>jpg</code>, <code>jpeg</code>, <code>txt</code>, <code>doc</code>, <code>docx</code>, <code>xlsx</code>, <code>zip</code>.',
+                limitsLi3: '<strong>Password:</strong> minimum 8 characters at registration.',
+                limitsLi4: '<strong>Isolation:</strong> you can only access files owned by your account.',
+                faqH: 'FAQ',
+                faqQ1: 'Can other people see my files?',
+                faqA1: 'No. Files are scoped to the account that uploaded them. Only an administrator role can list files across all users.',
+                faqQ2: 'What happens when my token expires?',
+                faqA2: 'Protected requests start returning <code>401 Unauthorized</code>. Log in again to obtain a fresh token; the web app does this transition for you by signing you out.',
+                faqQ3: 'Why was my upload rejected?',
+                faqA3: 'The most common reasons are an unsupported file extension or a file larger than 50 MB. The API responds with <code>400 Bad Request</code> or <code>413 Payload Too Large</code> and a short message explaining which rule was violated.',
+                faqQ4: 'Is there a programmatic list of endpoints?',
+                faqA4: 'Yes &mdash; call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.'
+            },
+            tr: {
+                _title: 'SecShare — Kullanım Kılavuzu',
+                backToApp: '&larr; Uygulamaya dön',
+                tocTitle: 'Bu sayfada',
+                tocOverview: 'Genel bakış',
+                tocWho: 'Kimler için',
+                tocStart: 'Başlangıç',
+                tocAuth: 'Kimlik doğrulama',
+                tocFiles: 'Dosyalarla çalışmak',
+                tocRef: 'API referansı',
+                tocLimits: 'Sınırlar ve kurallar',
+                tocFaq: 'SSS',
+                h1: 'Kullanım Kılavuzu',
+                lead: 'SecShare\'in ne olduğunu, ne işe yaradığını ve nasıl kullanılacağını anlamak için gereken her şey &mdash; web uygulamasından veya doğrudan API üzerinden.',
+                overviewH: 'Genel bakış',
+                overviewP1: '<strong>SecShare</strong>, kimlik doğrulamalı, kendi sunucunuzda barındırabileceğiniz bir dosya paylaşım servisidir. Her kullanıcıya, basit bir REST API ve hafif bir web arayüzü üzerinden dosya saklayıp erişebileceği özel bir alan sunar.',
+                overviewP2: 'Temel fikir <em>sahiplik yalıtımıdır</em>: bir dosya yüklediğinizde yalnızca sizin hesabınıza aittir. Başka hiçbir kullanıcı onu listeleyemez, indiremez veya silemez. Dosyalara dokunan her istek geçerli bir erişim anahtarı taşımalıdır; böylece dosyalar hiçbir zaman anonim olarak açığa çıkmaz.',
+                overviewCallout: '<strong>Makine tarafından okunabilir sürüm.</strong> API\'nin JSON açıklaması her zaman <a href="/api/info"><code>GET /api/info</code></a> adresinde bulunur &mdash; betikler, entegrasyonlar ve hızlı başvuru için kullanışlıdır.',
+                whoH: 'Kimler için',
+                whoLi1: '<strong>Bireyler</strong>: belgelerini her yerden erişilebilir tutmak için özel, gösterişsiz bir yer isteyenler.',
+                whoLi2: '<strong>Küçük ekipler</strong>: her üyenin kendi dosya kümesini bir giriş arkasında tutmasını isteyenler.',
+                whoLi3: '<strong>Geliştiriciler</strong>: üzerine geliştirme yapabilecekleri temiz bir REST arka ucu isteyenler veya JWT ile korunan dosya işleme için referans arayanlar.',
+                whoLi4: '<strong>Öğrenme ve güvenlik testi</strong>: derli toplu, kendi kendine yeten bir yükleme/indirme servisinin incelenmesinin faydalı olduğu durumlar.',
+                startH: 'Başlangıç',
+                startLi1: '<a href="/">Ana sayfayı</a> açın ve <strong>Hesap oluştur</strong>u seçin.',
+                startLi2: 'E-postanızı ve en az 8 karakterlik bir parola girin, ardından gönderin.',
+                startLi3: '<strong>Giriş yap</strong>a geçin ve aynı bilgilerle oturum açın.',
+                startLi4: 'Dosya yükleyebileceğiniz ve depolama kullanımınızı görebileceğiniz kontrol panelinize yönlendirilirsiniz.',
+                startP: 'Web uygulaması, erişim anahtarınızı tarayıcıda saklayarak sayfa yenilemeleri arasında oturumunuzu açık tutar. Temizlemek için <strong>Çıkış yap</strong>ı kullanın.',
+                authH: 'Kimlik doğrulama',
+                authP: 'SecShare <strong>JWT taşıyıcı anahtarları</strong> kullanır. Giriş yaparak bir anahtar alır, ardından her korumalı isteğe eklersiniz.',
+                authH1: '1. Kayıt',
+                authH2: '2. Giriş yapıp anahtarı alın',
+                authH3: '3. Korumalı bir uç noktayı çağırın',
+                authCallout: '<strong>Anahtar ömrü.</strong> Erişim anahtarları <strong>60 dakika</strong> sonra sona erer. Bir anahtar sona erdiğinde API <code>401 Unauthorized</code> döndürür; yenisini almak için tekrar giriş yapmanız yeterlidir. Bu olduğunda web uygulaması sizi otomatik olarak çıkış yaptırır.',
+                filesH: 'Dosyalarla çalışmak',
+                filesUploadH: 'Yükleme',
+                filesUploadP: 'Dosyayı <code>file</code> alan adı altında multipart form verisi olarak gönderin:',
+                filesUploadP2: 'Yanıt, saklanan dosyanın <code>id</code>, adı, boyutu, içerik türü ve oluşturulma zamanını içerir.',
+                filesListH: 'Dosyalarınızı listeleyin',
+                filesDownloadH: 'İndirme',
+                filesDeleteH: 'Silme',
+                filesDeleteP: 'Silme kalıcıdır ve yalnızca sahibi olduğunuz dosyalarda çalışır; başkasının dosyasını istemek <code>403 Forbidden</code> döndürür.',
+                refH: 'API referansı',
+                refMethod: 'Yöntem',
+                refPath: 'Yol',
+                refAuth: 'Yetki',
+                refDesc: 'Açıklama',
+                refPublic: 'Herkese açık',
+                refD1: 'Yeni bir hesap oluşturur.',
+                refD2: 'Kimlik bilgilerini JWT ile takas eder.',
+                refD3: 'Geçerli kullanıcının profili.',
+                refD4: 'Dosyalarınızı listeler.',
+                refD5: 'Bir dosya yükler.',
+                refD6: 'Sahibi olduğunuz bir dosyayı indirir.',
+                refD7: 'Sahibi olduğunuz bir dosyayı siler.',
+                refD8: 'Tüm dosyaları listeler (yalnızca ADMIN).',
+                refD9: 'Makine tarafından okunabilir kullanım kılavuzu.',
+                refD10: 'Canlılık kontrolü.',
+                limitsH: 'Sınırlar ve kurallar',
+                limitsLi1: '<strong>En büyük dosya boyutu:</strong> dosya başına 50 MB.',
+                limitsLi2: '<strong>İzin verilen türler:</strong> <code>pdf</code>, <code>png</code>, <code>jpg</code>, <code>jpeg</code>, <code>txt</code>, <code>doc</code>, <code>docx</code>, <code>xlsx</code>, <code>zip</code>.',
+                limitsLi3: '<strong>Parola:</strong> kayıtta en az 8 karakter.',
+                limitsLi4: '<strong>Yalıtım:</strong> yalnızca kendi hesabınıza ait dosyalara erişebilirsiniz.',
+                faqH: 'SSS',
+                faqQ1: 'Başkaları dosyalarımı görebilir mi?',
+                faqA1: 'Hayır. Dosyalar, onları yükleyen hesapla sınırlıdır. Yalnızca yönetici rolü tüm kullanıcıların dosyalarını listeleyebilir.',
+                faqQ2: 'Anahtarım sona erdiğinde ne olur?',
+                faqA2: 'Korumalı istekler <code>401 Unauthorized</code> döndürmeye başlar. Yeni bir anahtar almak için tekrar giriş yapın; web uygulaması sizi çıkış yaptırarak bu geçişi sizin için yapar.',
+                faqQ3: 'Yüklemem neden reddedildi?',
+                faqA3: 'En yaygın nedenler, desteklenmeyen bir dosya uzantısı veya 50 MB\'tan büyük bir dosyadır. API, hangi kuralın ihlal edildiğini açıklayan kısa bir mesajla <code>400 Bad Request</code> veya <code>413 Payload Too Large</code> yanıtı verir.',
+                faqQ4: 'Uç noktaların programatik bir listesi var mı?',
+                faqA4: 'Evet &mdash; servisin, sınırlarının ve her uç noktanın JSON özeti için <a href="/api/info"><code>GET /api/info</code></a> çağrısını yapın.'
+            }
+        });
+        I18N.apply();
+    </script>
 </body>
 </html>
