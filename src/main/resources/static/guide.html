@@ -140,6 +140,8 @@
             <a href="#getting-started" data-i18n="tocStart">Getting started</a>
             <a href="#auth" data-i18n="tocAuth">Authentication</a>
             <a href="#files" data-i18n="tocFiles">Working with files</a>
+            <a href="#sharing" data-i18n="tocSharing">Sharing files</a>
+            <a href="#scanning" data-i18n="tocScanning">Security &amp; scanning</a>
             <a href="#reference" data-i18n="tocRef">API reference</a>
             <a href="#limits" data-i18n-html="tocLimits">Limits &amp; rules</a>
             <a href="#faq" data-i18n="tocFaq">FAQ</a>
@@ -228,6 +230,35 @@
                 <p data-i18n-html="filesDeleteP">Deletion is permanent and only works on files you own; requesting someone else's file returns <code>403 Forbidden</code>.</p>
             </section>
 
+            <section id="sharing">
+                <h2 data-i18n="sharingH">Sharing files</h2>
+                <p data-i18n-html="sharingP">Beyond keeping files private, you can deliberately share one of your files in three ways. You create a share with <code>POST /api/files/{id}/shares</code> (or from the dashboard), passing a <code>type</code>.</p>
+
+                <h3 data-i18n="sharingLinkH">Public links</h3>
+                <p data-i18n-html="sharingLinkP">A tokenized URL anyone can open at the short path <code>/s/&lt;token&gt;</code>. Optionally protect it with a <strong>password</strong>, an <strong>expiry</strong>, and/or a <strong>maximum download count</strong>.</p>
+<pre>curl -X POST https://your-host/api/files/&lt;id&gt;/shares \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"type":"LINK","password":"optional","expiresInMinutes":1440,"maxDownloads":5}'</pre>
+
+                <h3 data-i18n="sharingUserH">Direct user grants</h3>
+                <p data-i18n-html="sharingUserP">Grant access to a specific registered user by email. They'll find it under <code>GET /api/files/shared-with-me</code>.</p>
+
+                <h3 data-i18n="sharingAudienceH">Email audiences</h3>
+                <p data-i18n-html="sharingAudienceP">Share with a whole email list at once. Each recipient gets their own account-less link, which can be emailed out automatically when mail delivery is enabled.</p>
+
+                <div class="callout" data-i18n-html="sharingBurn">
+                    <strong>Burn-after-reading.</strong> User and audience grants accept a <code>burnMode</code>: <code>FIRST</code> destroys the file the moment any recipient opens it, and <code>ALL</code> destroys it once every recipient has. You can also audit every download via <code>GET /api/files/{id}/downloads</code>.
+                </div>
+            </section>
+
+            <section id="scanning">
+                <h2 data-i18n="scanningH">Security &amp; scanning</h2>
+                <p data-i18n-html="scanningP1">Every upload is scanned <strong>synchronously, before it is stored</strong>. A built-in heuristic scanner always runs; when ClamAV is enabled it runs additionally for real-world coverage. If any engine flags the file, the upload is rejected with <code>400 Bad Request</code> and nothing is written to disk.</p>
+                <div class="callout" data-i18n-html="scanningCallout">
+                    <strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner &mdash; a safe way to confirm scanning is active without a real virus.
+                </div>
+            </section>
+
             <section id="reference">
                 <h2 data-i18n="refH">API reference</h2>
                 <table class="api">
@@ -243,6 +274,13 @@
                         <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td data-i18n="refD6">Download a file you own.</td></tr>
                         <tr><td><span class="method m-del">DELETE</span></td><td><code>/api/files/{id}</code></td><td>&#128274; Bearer</td><td data-i18n="refD7">Delete a file you own.</td></tr>
                         <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/all</code></td><td>&#128274; Admin</td><td data-i18n="refD8">List all files (ADMIN only).</td></tr>
+                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/files/{id}/shares</code></td><td>&#128274; Bearer</td><td data-i18n="refD11">Create a share (link, user, or audience).</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/{id}/shares</code></td><td>&#128274; Bearer</td><td data-i18n="refD12">List the shares on a file.</td></tr>
+                        <tr><td><span class="method m-del">DELETE</span></td><td><code>/api/files/shares/{shareId}</code></td><td>&#128274; Bearer</td><td data-i18n="refD13">Revoke a share.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/{id}/downloads</code></td><td>&#128274; Bearer</td><td data-i18n="refD14">Download audit log for a file.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/files/shared-with-me</code></td><td>&#128274; Bearer</td><td data-i18n="refD15">Files others shared with you.</td></tr>
+                        <tr><td><span class="method m-get">GET</span></td><td><code>/api/public/shares/{token}</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD16">Public link metadata.</td></tr>
+                        <tr><td><span class="method m-post">POST</span></td><td><code>/api/public/shares/{token}/download</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD17">Download via a public link.</td></tr>
                         <tr><td><span class="method m-get">GET</span></td><td><code>/api/info</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD9">Machine-readable usage guide.</td></tr>
                         <tr><td><span class="method m-get">GET</span></td><td><code>/health</code></td><td><span class="lock" data-i18n="refPublic">Public</span></td><td data-i18n="refD10">Liveness check.</td></tr>
                     </tbody>
@@ -321,6 +359,27 @@
                 filesDownloadH: 'Download',
                 filesDeleteH: 'Delete',
                 filesDeleteP: "Deletion is permanent and only works on files you own; requesting someone else's file returns <code>403 Forbidden</code>.",
+                tocSharing: 'Sharing files',
+                tocScanning: 'Security &amp; scanning',
+                sharingH: 'Sharing files',
+                sharingP: 'Beyond keeping files private, you can deliberately share one of your files in three ways. You create a share with <code>POST /api/files/{id}/shares</code> (or from the dashboard), passing a <code>type</code>.',
+                sharingLinkH: 'Public links',
+                sharingLinkP: 'A tokenized URL anyone can open at the short path <code>/s/&lt;token&gt;</code>. Optionally protect it with a <strong>password</strong>, an <strong>expiry</strong>, and/or a <strong>maximum download count</strong>.',
+                sharingUserH: 'Direct user grants',
+                sharingUserP: "Grant access to a specific registered user by email. They'll find it under <code>GET /api/files/shared-with-me</code>.",
+                sharingAudienceH: 'Email audiences',
+                sharingAudienceP: 'Share with a whole email list at once. Each recipient gets their own account-less link, which can be emailed out automatically when mail delivery is enabled.',
+                sharingBurn: '<strong>Burn-after-reading.</strong> User and audience grants accept a <code>burnMode</code>: <code>FIRST</code> destroys the file the moment any recipient opens it, and <code>ALL</code> destroys it once every recipient has. You can also audit every download via <code>GET /api/files/{id}/downloads</code>.',
+                scanningH: 'Security &amp; scanning',
+                scanningP1: 'Every upload is scanned <strong>synchronously, before it is stored</strong>. A built-in heuristic scanner always runs; when ClamAV is enabled it runs additionally for real-world coverage. If any engine flags the file, the upload is rejected with <code>400 Bad Request</code> and nothing is written to disk.',
+                scanningCallout: '<strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner &mdash; a safe way to confirm scanning is active without a real virus.',
+                refD11: 'Create a share (link, user, or audience).',
+                refD12: 'List the shares on a file.',
+                refD13: 'Revoke a share.',
+                refD14: 'Download audit log for a file.',
+                refD15: 'Files others shared with you.',
+                refD16: 'Public link metadata.',
+                refD17: 'Download via a public link.',
                 refH: 'API reference',
                 refMethod: 'Method',
                 refPath: 'Path',
@@ -395,6 +454,27 @@
                 filesDownloadH: 'İndirme',
                 filesDeleteH: 'Silme',
                 filesDeleteP: 'Silme kalıcıdır ve yalnızca sahibi olduğunuz dosyalarda çalışır; başkasının dosyasını istemek <code>403 Forbidden</code> döndürür.',
+                tocSharing: 'Dosya paylaşma',
+                tocScanning: 'Güvenlik ve tarama',
+                sharingH: 'Dosya paylaşma',
+                sharingP: 'Dosyaları özel tutmanın ötesinde, bir dosyanızı üç şekilde kasıtlı olarak paylaşabilirsiniz. Bir paylaşımı <code>POST /api/files/{id}/shares</code> ile (veya kontrol panelinden) bir <code>type</code> göndererek oluşturursunuz.',
+                sharingLinkH: 'Herkese açık bağlantılar',
+                sharingLinkP: 'Herkesin <code>/s/&lt;token&gt;</code> kısa yolundan açabileceği tokenlı bir URL. İsteğe bağlı olarak bir <strong>parola</strong>, bir <strong>son kullanma süresi</strong> ve/veya bir <strong>maksimum indirme sayısı</strong> ile koruyun.',
+                sharingUserH: 'Doğrudan kullanıcı paylaşımı',
+                sharingUserP: 'Belirli bir kayıtlı kullanıcıya e-posta ile erişim verin. Onu <code>GET /api/files/shared-with-me</code> altında bulurlar.',
+                sharingAudienceH: 'E-posta grupları',
+                sharingAudienceP: 'Tüm bir e-posta listesiyle tek seferde paylaşın. Her alıcı kendi hesapsız bağlantısını alır; e-posta teslimi etkinse bu bağlantılar otomatik olarak gönderilebilir.',
+                sharingBurn: '<strong>Okununca imha.</strong> Kullanıcı ve grup paylaşımları bir <code>burnMode</code> kabul eder: <code>FIRST</code> dosyayı herhangi bir alıcı açar açmaz yok eder, <code>ALL</code> ise her alıcı açtıktan sonra yok eder. Ayrıca her indirmeyi <code>GET /api/files/{id}/downloads</code> ile denetleyebilirsiniz.',
+                scanningH: 'Güvenlik ve tarama',
+                scanningP1: 'Her yükleme <strong>saklanmadan önce, senkron olarak</strong> taranır. Dahili sezgisel bir tarayıcı her zaman çalışır; ClamAV etkinse gerçek dünya kapsamı için ek olarak çalışır. Herhangi bir motor dosyayı işaretlerse, yükleme <code>400 Bad Request</code> ile reddedilir ve diske hiçbir şey yazılmaz.',
+                scanningCallout: '<strong>Deneyin.</strong> <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test dizesini içeren bir dosyayı yüklemek tarayıcı tarafından reddedilir &mdash; gerçek bir virüs olmadan taramanın etkin olduğunu doğrulamanın güvenli bir yolu.',
+                refD11: 'Paylaşım oluşturur (bağlantı, kullanıcı veya grup).',
+                refD12: 'Bir dosyadaki paylaşımları listeler.',
+                refD13: 'Bir paylaşımı iptal eder.',
+                refD14: 'Bir dosyanın indirme denetim kaydı.',
+                refD15: 'Başkalarının sizinle paylaştığı dosyalar.',
+                refD16: 'Herkese açık bağlantı meta verisi.',
+                refD17: 'Herkese açık bir bağlantı üzerinden indirir.',
                 refH: 'API referansı',
                 refMethod: 'Yöntem',
                 refPath: 'Yol',
