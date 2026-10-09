@@ -37,3 +37,8 @@ uploads/
 
 ### Secrets ###
 .env
+
+### Build artifacts & local files ###
+*.zip
+*.pdf
+app.zip

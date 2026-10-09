@@ -90,7 +90,7 @@ Doküman boyunca geçecek temel kavramlar:
 | **Oracle Cloud** | Ana barındırma (hosting) ortamı (SSH ile deploy). |
 | **DuckDNS** | Ücretsiz alan adı servisi — `sec-share.duckdns.org`. |
 | **Nginx** | Önde ters proxy + HTTPS (mimari şemada; uygulama sadece localhost:8080'e bağlanır). |
-| **Fly.io / Render** | Alternatif deploy hedefleri için hazır yapılandırma dosyaları (`fly.toml`, `render.yaml`) mevcut. |
+| **Render** | Alternatif deploy hedefi için hazır yapılandırma dosyası (`render.yaml`) mevcut. |
 
 ---
 
@@ -340,7 +340,7 @@ Farklı bulut sağlayıcıları veritabanı adresini farklı biçimlerde verir. 
   ve kullanıcı adı/şifreyi ayıklar (URL-decode ederek).
 - `DATABASE_URL` yoksa `application.properties` içindeki standart ayarları kullanır.
 
-Bu sayede aynı imaj Render, Fly.io, Oracle gibi ortamlarda ekstra değişiklik
+Bu sayede aynı imaj Render, Oracle gibi ortamlarda ekstra değişiklik
 olmadan çalışabilir.
 
 ### 4.11 Hata Yönetimi
@@ -530,8 +530,6 @@ docker compose up -d --build     # kod değişince yeniden derle
 Gerekli GitHub Secrets: `SSH_HOST`, `SSH_PRIVATE_KEY`.
 
 ### Alternatif hedefler
-- **Fly.io** (`fly.toml`): Frankfurt bölgesi, port 8080, HTTPS zorunlu,
-  otomatik durdur/başlat, `uploads` için kalıcı disk (mount).
 - **Render** (`render.yaml`): Docker imajı + yönetilen PostgreSQL; `JWT_SECRET`
   Render tarafından otomatik üretilir; `STORAGE_PATH` proje diskine ayarlanır.
 
