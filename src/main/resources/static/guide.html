@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecShare — Usage Guide</title>
+    <title>SecShare: Usage Guide</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="/i18n.js"></script>
     <style>
@@ -149,14 +149,14 @@
 
         <article class="content">
             <h1 data-i18n="h1">Usage Guide</h1>
-            <p class="lead" data-i18n-html="lead">Everything you need to understand what SecShare is, what it's for, and how to use it &mdash; from the web app or directly against the API.</p>
+            <p class="lead" data-i18n-html="lead">Everything you need to understand what SecShare is, what it's for, and how to use it, whether from the web app or directly against the API.</p>
 
             <section id="overview">
                 <h2 data-i18n="overviewH">Overview</h2>
                 <p data-i18n-html="overviewP1"><strong>SecShare</strong> is a self-hosted, authenticated file-sharing service. It gives each user a private space to store and retrieve files through a simple REST API and a lightweight web interface.</p>
                 <p data-i18n-html="overviewP2">The core idea is <em>ownership isolation</em>: when you upload a file it belongs to your account only. No other user can list, download, or delete it. Every request that touches files must carry a valid access token, so files are never exposed anonymously.</p>
                 <div class="callout" data-i18n-html="overviewCallout">
-                    <strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a> &mdash; useful for scripts, integrations, and quick reference.
+                    <strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a>. It's useful for scripts, integrations, and quick reference.
                 </div>
             </section>
 
@@ -255,7 +255,7 @@
                 <h2 data-i18n="scanningH">Security &amp; scanning</h2>
                 <p data-i18n-html="scanningP1">Every upload is scanned <strong>synchronously, before it is stored</strong>. A built-in heuristic scanner always runs; when ClamAV is enabled it runs additionally for real-world coverage. If any engine flags the file, the upload is rejected with <code>400 Bad Request</code> and nothing is written to disk.</p>
                 <div class="callout" data-i18n-html="scanningCallout">
-                    <strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner &mdash; a safe way to confirm scanning is active without a real virus.
+                    <strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner, a safe way to confirm scanning is active without a real virus.
                 </div>
             </section>
 
@@ -309,7 +309,7 @@
                 <p data-i18n-html="faqA3">The most common reasons are an unsupported file extension or a file larger than 50 MB. The API responds with <code>400 Bad Request</code> or <code>413 Payload Too Large</code> and a short message explaining which rule was violated.</p>
 
                 <h3 data-i18n="faqQ4">Is there a programmatic list of endpoints?</h3>
-                <p data-i18n-html="faqA4">Yes &mdash; call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.</p>
+                <p data-i18n-html="faqA4">Yes. Call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.</p>
             </section>
         </article>
     </div>
@@ -317,7 +317,7 @@
     <script>
         I18N.register({
             en: {
-                _title: 'SecShare — Usage Guide',
+                _title: 'SecShare: Usage Guide',
                 backToApp: '&larr; Back to app',
                 tocTitle: 'On this page',
                 tocOverview: 'Overview',
@@ -329,11 +329,11 @@
                 tocLimits: 'Limits &amp; rules',
                 tocFaq: 'FAQ',
                 h1: 'Usage Guide',
-                lead: "Everything you need to understand what SecShare is, what it's for, and how to use it &mdash; from the web app or directly against the API.",
+                lead: "Everything you need to understand what SecShare is, what it's for, and how to use it, whether from the web app or directly against the API.",
                 overviewH: 'Overview',
                 overviewP1: '<strong>SecShare</strong> is a self-hosted, authenticated file-sharing service. It gives each user a private space to store and retrieve files through a simple REST API and a lightweight web interface.',
                 overviewP2: 'The core idea is <em>ownership isolation</em>: when you upload a file it belongs to your account only. No other user can list, download, or delete it. Every request that touches files must carry a valid access token, so files are never exposed anonymously.',
-                overviewCallout: '<strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a> &mdash; useful for scripts, integrations, and quick reference.',
+                overviewCallout: '<strong>Machine-readable version.</strong> A JSON description of the API is always available at <a href="/api/info"><code>GET /api/info</code></a>. It's useful for scripts, integrations, and quick reference.',
                 whoH: "Who it's for",
                 whoLi1: '<strong>Individuals</strong> who want a private, no-frills place to keep documents accessible from anywhere.',
                 whoLi2: '<strong>Small teams</strong> that need each member to hold their own set of files behind a login.',
@@ -372,7 +372,7 @@
                 sharingBurn: '<strong>Burn-after-reading.</strong> User and audience grants accept a <code>burnMode</code>: <code>FIRST</code> destroys the file the moment any recipient opens it, and <code>ALL</code> destroys it once every recipient has. You can also audit every download via <code>GET /api/files/{id}/downloads</code>.',
                 scanningH: 'Security &amp; scanning',
                 scanningP1: 'Every upload is scanned <strong>synchronously, before it is stored</strong>. A built-in heuristic scanner always runs; when ClamAV is enabled it runs additionally for real-world coverage. If any engine flags the file, the upload is rejected with <code>400 Bad Request</code> and nothing is written to disk.',
-                scanningCallout: '<strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner &mdash; a safe way to confirm scanning is active without a real virus.',
+                scanningCallout: '<strong>Try it.</strong> Uploading a file containing the <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test string is rejected by the scanner, a safe way to confirm scanning is active without a real virus.',
                 refD11: 'Create a share (link, user, or audience).',
                 refD12: 'List the shares on a file.',
                 refD13: 'Revoke a share.',
@@ -409,10 +409,10 @@
                 faqQ3: 'Why was my upload rejected?',
                 faqA3: 'The most common reasons are an unsupported file extension or a file larger than 50 MB. The API responds with <code>400 Bad Request</code> or <code>413 Payload Too Large</code> and a short message explaining which rule was violated.',
                 faqQ4: 'Is there a programmatic list of endpoints?',
-                faqA4: 'Yes &mdash; call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.'
+                faqA4: 'Yes. Call <a href="/api/info"><code>GET /api/info</code></a> for a JSON summary of the service, its limits, and every endpoint.'
             },
             tr: {
-                _title: 'SecShare — Kullanım Kılavuzu',
+                _title: 'SecShare: Kullanım Kılavuzu',
                 backToApp: '&larr; Uygulamaya dön',
                 tocTitle: 'Bu sayfada',
                 tocOverview: 'Genel bakış',
@@ -424,11 +424,11 @@
                 tocLimits: 'Sınırlar ve kurallar',
                 tocFaq: 'SSS',
                 h1: 'Kullanım Kılavuzu',
-                lead: 'SecShare\'in ne olduğunu, ne işe yaradığını ve nasıl kullanılacağını anlamak için gereken her şey &mdash; web uygulamasından veya doğrudan API üzerinden.',
+                lead: 'SecShare\'in ne olduğunu, ne işe yaradığını ve nasıl kullanılacağını anlamak için gereken her şey: web uygulamasından veya doğrudan API üzerinden.',
                 overviewH: 'Genel bakış',
                 overviewP1: '<strong>SecShare</strong>, kimlik doğrulamalı, kendi sunucunuzda barındırabileceğiniz bir dosya paylaşım servisidir. Her kullanıcıya, basit bir REST API ve hafif bir web arayüzü üzerinden dosya saklayıp erişebileceği özel bir alan sunar.',
                 overviewP2: 'Temel fikir <em>sahiplik yalıtımıdır</em>: bir dosya yüklediğinizde yalnızca sizin hesabınıza aittir. Başka hiçbir kullanıcı onu listeleyemez, indiremez veya silemez. Dosyalara dokunan her istek geçerli bir erişim anahtarı taşımalıdır; böylece dosyalar hiçbir zaman anonim olarak açığa çıkmaz.',
-                overviewCallout: '<strong>Makine tarafından okunabilir sürüm.</strong> API\'nin JSON açıklaması her zaman <a href="/api/info"><code>GET /api/info</code></a> adresinde bulunur &mdash; betikler, entegrasyonlar ve hızlı başvuru için kullanışlıdır.',
+                overviewCallout: '<strong>Makine tarafından okunabilir sürüm.</strong> API\'nin JSON açıklaması her zaman <a href="/api/info"><code>GET /api/info</code></a> adresinde bulunur. Betikler, entegrasyonlar ve hızlı başvuru için kullanışlıdır.',
                 whoH: 'Kimler için',
                 whoLi1: '<strong>Bireyler</strong>: belgelerini her yerden erişilebilir tutmak için özel, gösterişsiz bir yer isteyenler.',
                 whoLi2: '<strong>Küçük ekipler</strong>: her üyenin kendi dosya kümesini bir giriş arkasında tutmasını isteyenler.',
@@ -467,7 +467,7 @@
                 sharingBurn: '<strong>Okununca imha.</strong> Kullanıcı ve grup paylaşımları bir <code>burnMode</code> kabul eder: <code>FIRST</code> dosyayı herhangi bir alıcı açar açmaz yok eder, <code>ALL</code> ise her alıcı açtıktan sonra yok eder. Ayrıca her indirmeyi <code>GET /api/files/{id}/downloads</code> ile denetleyebilirsiniz.',
                 scanningH: 'Güvenlik ve tarama',
                 scanningP1: 'Her yükleme <strong>saklanmadan önce, senkron olarak</strong> taranır. Dahili sezgisel bir tarayıcı her zaman çalışır; ClamAV etkinse gerçek dünya kapsamı için ek olarak çalışır. Herhangi bir motor dosyayı işaretlerse, yükleme <code>400 Bad Request</code> ile reddedilir ve diske hiçbir şey yazılmaz.',
-                scanningCallout: '<strong>Deneyin.</strong> <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test dizesini içeren bir dosyayı yüklemek tarayıcı tarafından reddedilir &mdash; gerçek bir virüs olmadan taramanın etkin olduğunu doğrulamanın güvenli bir yolu.',
+                scanningCallout: '<strong>Deneyin.</strong> <a href="https://www.eicar.org/download-anti-malware-testfile/">EICAR</a> test dizesini içeren bir dosyayı yüklemek tarayıcı tarafından reddedilir. Bu, gerçek bir virüs olmadan taramanın etkin olduğunu doğrulamanın güvenli bir yoludur.',
                 refD11: 'Paylaşım oluşturur (bağlantı, kullanıcı veya grup).',
                 refD12: 'Bir dosyadaki paylaşımları listeler.',
                 refD13: 'Bir paylaşımı iptal eder.',
@@ -504,7 +504,7 @@
                 faqQ3: 'Yüklemem neden reddedildi?',
                 faqA3: 'En yaygın nedenler, desteklenmeyen bir dosya uzantısı veya 50 MB\'tan büyük bir dosyadır. API, hangi kuralın ihlal edildiğini açıklayan kısa bir mesajla <code>400 Bad Request</code> veya <code>413 Payload Too Large</code> yanıtı verir.',
                 faqQ4: 'Uç noktaların programatik bir listesi var mı?',
-                faqA4: 'Evet &mdash; servisin, sınırlarının ve her uç noktanın JSON özeti için <a href="/api/info"><code>GET /api/info</code></a> çağrısını yapın.'
+                faqA4: 'Evet. Servisin, sınırlarının ve her uç noktanın JSON özeti için <a href="/api/info"><code>GET /api/info</code></a> çağrısını yapın.'
             }
         });
         I18N.apply();

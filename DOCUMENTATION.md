@@ -1,15 +1,15 @@
-# SecShare — Documentation & User Guide
+# SecShare: Documentation & User Guide
 
-SecShare is a security-focused file-sharing application with **JWT-based authentication**
-that lets users register, sign in, upload files, and then share them deliberately — as
-expiring public links, direct grants to other users, or bulk email audiences. Every upload
-is **scanned for malware** before it is stored, and shares can **self-destruct after being
-read**. The backend is built with Spring Boot (Java 17), the database is PostgreSQL, and
-files are stored on the server's disk.
+SecShare is a security-focused file-sharing application with **JWT-based authentication**.
+Users register, sign in, upload files, and then share them deliberately as expiring public
+links, direct grants to other users, or bulk email audiences. Every upload is **scanned for
+malware** before it is stored, and shares can **self-destruct after being read**. The backend
+is built with Spring Boot (Java 17), the database is PostgreSQL, and files are stored on the
+server's disk.
 
-> ⚠️ **Security note:** This application was built for educational / security-testing
-> purposes. Be careful when running it on the public internet — don't put sensitive
-> data on it and restrict access.
+> ⚠️ **Security note:** This application was built for educational and security-testing
+> purposes. Be careful when running it on the public internet: don't put sensitive data on
+> it, and restrict access.
 
 ---
 
@@ -19,30 +19,30 @@ files are stored on the server's disk.
 
 ```
 Browser / curl
-      │  (HTTP + JWT Bearer token)
-      ▼
-┌──────────────────────────────────────────────┐
-│  Spring Boot (port 8080)                      │
-│  ├─ AuthController        /api/auth           │  → register & login, issues token
-│  ├─ FileController        /api/files          │  → upload, list, download, delete
-│  ├─ FileShareController   /api/files/.../shares│ → create/list/revoke shares, audit, members
-│  ├─ PublicShareController /api/public/shares   │ → anonymous link metadata & download
-│  ├─ JWT filter                                 │ → validates the token on every request
-│  ├─ Malware scan (built-in + optional ClamAV)  │ → rejects infected uploads before disk
-│  ├─ Self-destruct reaper (scheduled)           │ → purges expired / burned links
-│  ├─ Email outbox (SMTP, retrying)              │ → mails per-recipient audience links
-│  └─ Static UI            index/share/guide.html│
-└──────┬───────────────┬─────────────────┬───────┘
-       │               │                 │
-  ┌────▼─────┐   ┌──────▼──────────┐  ┌──▼──────────┐
-  │PostgreSQL│   │ Disk: /app/     │  │ ClamAV      │
-  │ users,   │   │ uploads/        │  │ (optional,  │
-  │ files,   │   │ (uploaded files)│  │  over TCP)  │
-  │ shares,  │   └─────────────────┘  └─────────────┘
-  │ audiences│
-  │ audit,   │
-  │ outbox   │
-  └──────────┘
+      |  (HTTP + JWT Bearer token)
+      v
++------------------------------------------------+
+|  Spring Boot (port 8080)                       |
+|  AuthController        /api/auth               |  register & login, issues token
+|  FileController        /api/files              |  upload, list, download, delete
+|  FileShareController   /api/files/.../shares   |  create/list/revoke shares, audit
+|  PublicShareController /api/public/shares      |  anonymous link metadata & download
+|  JWT filter                                    |  validates the token on every request
+|  Malware scan (built-in + optional ClamAV)     |  rejects infected uploads before disk
+|  Self-destruct reaper (scheduled)              |  purges expired / burned links
+|  Email outbox (SMTP, retrying)                 |  mails per-recipient audience links
+|  Static UI             index/share/guide.html  |
++------+---------------+-----------------+--------+
+       |               |                 |
+  +----v-----+   +------v----------+  +--v----------+
+  |PostgreSQL|   | Disk: /app/     |  | ClamAV      |
+  | users,   |   | uploads/        |  | (optional,  |
+  | files,   |   | (uploaded files)|  |  over TCP)  |
+  | shares,  |   +-----------------+  +-------------+
+  | audiences|
+  | audit,   |
+  | outbox   |
+  +----------+
 ```
 
 ### Authentication flow (JWT)
@@ -57,7 +57,7 @@ Browser / curl
    the requesting user is identified. Tokens are valid for **60 minutes** by default.
 
 The token contains the user id (`subject`), `email`, and `roles`. No session is kept
-on the server (**stateless**) — identity comes entirely from the token.
+on the server (**stateless**); identity comes entirely from the token.
 
 ### File storage
 
@@ -70,7 +70,7 @@ on the server (**stateless**) — identity comes entirely from the token.
 
 ### Malware scanning
 
-Every upload is scanned **synchronously, before the bytes ever touch disk** — an infected
+Every upload is scanned **synchronously, before the bytes ever touch disk**. An infected
 upload is rejected with `400 Bad Request` and never persisted.
 
 - A **built-in heuristic scanner** always runs (EICAR test string, suspicious patterns,
@@ -85,16 +85,16 @@ upload is rejected with `400 Bad Request` and never persisted.
 An owner can share one of their files in three ways (`POST /api/files/{id}/shares` with a
 `type`):
 
-- **`LINK`** — a public, tokenized URL anyone can use. Served at the short path
-  `/s/<token>` (which forwards to `share.html`). Optional protections: a **password**, an
+- **`LINK`**: a public, tokenized URL anyone can use. Served at the short path
+  `/s/<token>` (which forwards to `share.html`). Optional protections are a **password**, an
   **expiry** (`expiresInMinutes`), and/or a **maximum download count** (`maxDownloads`).
-- **`USER`** — a direct grant to a specific registered recipient (`recipientEmail`), visible
+- **`USER`**: a direct grant to a specific registered recipient (`recipientEmail`), visible
   to them under `GET /api/files/shared-with-me`.
-- **`AUDIENCE`** — a grant to a whole email list (`recipientEmails`), reaching many
+- **`AUDIENCE`**: a grant to a whole email list (`recipientEmails`), reaching many
   recipients from a single share. Recipients can download via an account-less token or by
   signing in. When email is enabled, their links can be **mailed out** (`emailLinks`).
 
-**Burn-after-reading:** `USER`/`AUDIENCE` grants accept a `burnMode` — `NONE` (default),
+**Burn-after-reading:** `USER`/`AUDIENCE` grants accept a `burnMode`: `NONE` (default),
 `FIRST` (destroyed the moment any one recipient opens it), or `ALL` (destroyed once every
 recipient has opened it). A scheduled reaper also purges links that expired unread.
 
@@ -108,7 +108,7 @@ log via `GET /api/files/{id}/downloads`, and can opt into download notifications
 |------|-------|
 | Maximum file size | 50 MB |
 | Allowed extensions | `pdf, png, jpg, jpeg, txt, doc, docx, xlsx, zip` |
-| Password length | 8–72 characters |
+| Password length | 8 to 72 characters |
 | Token lifetime | 60 minutes (default) |
 
 ---
@@ -133,8 +133,8 @@ docker compose logs -f app
 It's ready once you see the line "Started SecshareApplication".
 
 Open in a browser:
-- **http://localhost:8080/** — the main app (sign in, upload, and manage shares)
-- **http://localhost:8080/guide.html** — the built-in usage guide
+- **http://localhost:8080/** is the main app (sign in, upload, and manage shares)
+- **http://localhost:8080/guide.html** is the built-in usage guide
 
 Management commands:
 
@@ -147,7 +147,7 @@ docker compose up -d --build     # rebuild after code changes
 
 ---
 
-## 3. How to try it (step by step — curl)
+## 3. How to try it (step by step, with curl)
 
 You can run the commands below in your terminal in order.
 
@@ -158,7 +158,7 @@ curl -X POST http://localhost:8080/api/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"email":"demo@example.com","password":"password123"}'
 ```
-Success → `201 Created`. Same email again → `409 Conflict`.
+Success -> `201 Created`. Same email again -> `409 Conflict`.
 
 ### 3.2 Log in and get a token
 
@@ -175,7 +175,7 @@ echo $TOKEN
 
 ```bash
 curl http://localhost:8080/hello -H "Authorization: Bearer $TOKEN"
-# → Hello demo@example.com
+# -> Hello demo@example.com
 ```
 
 ### 3.4 Upload a file
@@ -186,7 +186,7 @@ echo "hello secshare" > sample.txt
 curl -X POST http://localhost:8080/api/files/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@sample.txt"
-# → {"id":"...","name":"sample.txt","sizeBytes":15,...}
+# -> {"id":"...","name":"sample.txt","sizeBytes":15,...}
 ```
 Note the returned `id`.
 
@@ -208,14 +208,14 @@ curl http://localhost:8080/api/files/<FILE_ID> \
 ```bash
 curl -X DELETE http://localhost:8080/api/files/<FILE_ID> \
   -H "Authorization: Bearer $TOKEN"
-# → 204 No Content
+# -> 204 No Content
 ```
 
 ### 3.8 Access attempt without a token
 
 ```bash
 curl -i http://localhost:8080/api/files
-# → 403 (not authenticated)
+# -> 403 (not authenticated)
 ```
 
 ---
@@ -226,13 +226,13 @@ Base URL: `http://localhost:8080`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | ✗ | Register. Body: `{email, password}`. → 201 |
-| POST | `/api/auth/login` | ✗ | Log in. Body: `{email, password}`. → `{accessToken}` |
-| GET | `/hello` | ✓ | Identity test. → `Hello <email>` |
-| POST | `/api/files/upload` | ✓ | Upload with a multipart `file` field. → file info |
+| POST | `/api/auth/register` | ✗ | Register. Body: `{email, password}`. -> 201 |
+| POST | `/api/auth/login` | ✗ | Log in. Body: `{email, password}`. -> `{accessToken}` |
+| GET | `/hello` | ✓ | Identity test. -> `Hello <email>` |
+| POST | `/api/files/upload` | ✓ | Upload with a multipart `file` field. -> file info |
 | GET | `/api/files` | ✓ | List your own files |
 | GET | `/api/files/{id}` | ✓ | Download a file (owner only) |
-| DELETE | `/api/files/{id}` | ✓ | Delete a file (owner only). → 204 |
+| DELETE | `/api/files/{id}` | ✓ | Delete a file (owner only). -> 204 |
 | GET | `/api/files/all` | ✓ ADMIN | All files (ADMIN role only) |
 | POST | `/api/files/{id}/shares` | ✓ | Create a share: `LINK`, `USER`, or `AUDIENCE` |
 | GET | `/api/files/{id}/shares` | ✓ | List the shares you created for a file |
@@ -243,7 +243,7 @@ Base URL: `http://localhost:8080`
 | GET | `/api/public/shares/{token}` | ✗ | Public link metadata (name, size, password required?) |
 | POST | `/api/public/shares/{token}/download` | ✗ | Download via a public link (password in body if set) |
 | GET | `/api/info` | ✗ | Machine-readable usage guide |
-| GET | `/health`, `/healthz` | ✗ | Health check. → `{"status":"ok"}` |
+| GET | `/health`, `/healthz` | ✗ | Health check. -> `{"status":"ok"}` |
 
 **Auth header:** `Authorization: Bearer <accessToken>`
 
@@ -285,12 +285,12 @@ Base URL: `http://localhost:8080`
 
 ## 5. Web interface
 
-- **`/`** (`index.html`) — the main app: register/sign in, upload files, see storage usage,
-  and create & manage shares (links, user grants, audiences). The UI is bilingual (TR/EN)
+- **`/`** (`index.html`) is the main app: register/sign in, upload files, see storage usage,
+  and create and manage shares (links, user grants, audiences). The UI is bilingual (TR/EN)
   with an auto-detected, persistent language toggle.
-- **`/s/<token>`** (`share.html`) — the public landing page for a shared link; anonymous
+- **`/s/<token>`** (`share.html`) is the public landing page for a shared link. Anonymous
   visitors enter a password here if the link requires one, then download.
-- **`/guide.html`** — the built-in usage guide.
+- **`/guide.html`** is the built-in usage guide.
 
 To use it from the browser, sign in on the home page first; the page stores the token for you
 and attaches it to requests.
@@ -307,23 +307,23 @@ Variables read from `.env` (by Docker Compose) and supported by the application:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://db:5432/secshare` | Database address |
-| `SPRING_DATASOURCE_USERNAME` | — | DB user (`DB_USER`) |
-| `SPRING_DATASOURCE_PASSWORD` | — | DB password (`DB_PASSWORD`) |
+| `SPRING_DATASOURCE_USERNAME` | (none) | DB user (`DB_USER`) |
+| `SPRING_DATASOURCE_PASSWORD` | (none) | DB password (`DB_PASSWORD`) |
 | `JWT_SECRET` | (dev default) | Base64, must be at least 32 bytes |
 | `JWT_EXPIRATION_MINUTES` | `60` | Token lifetime (minutes) |
 | `STORAGE_PATH` | `/app/uploads` | Directory where files are stored |
 | `PORT` | `8080` | HTTP port |
 | `LOG_LEVEL` | `INFO` | Spring Security log level |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | If both set, an ADMIN account is seeded on startup |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | (none) | If both set, an ADMIN account is seeded on startup |
 | `CLAMAV_ENABLED` | `false` | Run ClamAV in addition to the built-in scanner |
 | `CLAMAV_HOST` / `CLAMAV_PORT` / `CLAMAV_TIMEOUT_MS` | `localhost` / `3310` / `5000` | ClamAV daemon connection |
 | `CLEANUP_ENABLED` / `CLEANUP_INTERVAL_MS` | `true` / `60000` | Self-destruct reaper for expired links |
 | `MAIL_ENABLED` | `false` | Enable outbound audience emails |
 | `MAIL_FROM` | `no-reply@secshare.local` | From address for sent mail |
-| `MAIL_HOST` / `MAIL_PORT` | — / `587` | SMTP server |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | — | SMTP credentials |
+| `MAIL_HOST` / `MAIL_PORT` | (none) / `587` | SMTP server |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | (none) | SMTP credentials |
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` / `true` | SMTP transport options |
-| `PUBLIC_BASE_URL` | — | Absolute base URL so links in emails are absolute |
+| `PUBLIC_BASE_URL` | (none) | Absolute base URL so links in emails are absolute |
 
 > `JWT_SECRET` must be at least 32 bytes (after base64 decoding), otherwise the
 > application won't start. To generate one: `openssl rand -base64 32`
@@ -333,11 +333,11 @@ Variables read from `.env` (by Docker Compose) and supported by the application:
 ## 7. Troubleshooting
 
 - **App won't start / DB error:** Check `docker compose logs app` and
-  `docker compose logs db`. Wait for the DB to become `Up (healthy)` — the app
+  `docker compose logs db`. Wait for the DB to become `Up (healthy)`; the app
   won't start until the DB is ready.
 - **Upload returns 400:** Is the extension in the allow-list? (`pdf, png, jpg, jpeg,
   txt, doc, docx, xlsx, zip`), the file must not be empty, and it must pass the malware
-  scan (an infected file — e.g. the EICAR test string — is rejected with 400).
+  scan (an infected file, such as the EICAR test string, is rejected with 400).
 - **Request returns 403:** The token may be missing/expired; log in again.
 - **Port conflict:** If 8080 or 5432 is taken, change the port mapping in
   `docker-compose.yml`.
