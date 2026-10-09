@@ -1,6 +1,10 @@
-# SecureShare
+# SecShare
 
-A modern and secure file-sharing platform built with **Spring Boot**, **React**, and **PostgreSQL**. SecureShare allows users to upload, manage, and securely share files through an intuitive web interface while following modern security best practices.
+A self-hosted, security-focused file-sharing service built with **Spring Boot** and
+**PostgreSQL**. SecShare gives every user a private space to upload files and then share
+them deliberately — through expiring public links, direct grants to other users, or bulk
+email audiences — with **malware scanning on upload** and **burn-after-reading
+self-destruct** baked in.
 
 🌐 **Live Demo:** https://sec-share.duckdns.org
 
@@ -8,46 +12,57 @@ A modern and secure file-sharing platform built with **Spring Boot**, **React**,
 
 ## Features
 
-- 🔐 Secure user authentication with JWT
-- 👤 User registration and login
-- 📁 File upload and download
-- 🔗 Secure shareable file links
-- 🛡️ Role-based authorization
-- 🔒 Password hashing with Spring Security
-- 📦 PostgreSQL database integration
+- 🔐 JWT authentication — register, sign in, BCrypt-hashed passwords
+- 👤 Per-user ownership isolation — nobody can list, download, or delete another user's files
+- 🛡️ **Malware & content scanning on upload** — a built-in heuristic scanner plus optional
+  **ClamAV**; infected uploads are rejected *before* they ever touch disk
+- 🔗 **Three sharing models**
+  - **Public links** — tokenized short URLs (`/s/<token>`), optionally protected with a
+    password, an expiry, and/or a maximum download count
+  - **Direct user grants** — share with a specific registered recipient
+  - **Audiences** — share with a whole email list in one action (fans out to thousands of
+    recipients via batched inserts)
+- 💥 **Burn-after-reading self-destruct** — destroy the file on the first recipient's open
+  (`FIRST`) or once every recipient has opened it (`ALL`); a background reaper purges
+  expired, unread links
+- 📜 **Download audit log** — who downloaded what, when, and through which channel
+- ✉️ **Email delivery** — per-recipient audience links mailed via a durable outbox (SMTP,
+  with retries); optional owner notifications on download
+- 🪪 Account-less recipient links — audience members can download without signing up
+- 🌐 **Bilingual UI (TR / EN)** with auto-detection and a persistent toggle
+- 📊 Storage usage tracking per account
+- 📦 PostgreSQL + on-disk file storage
 - 🐳 Docker & Docker Compose support
-- 🚀 Automated deployment with GitHub Actions
-- ☁️ Oracle Cloud deployment
+- 🚀 Automated deployment via GitHub Actions
+- 🧪 Full-stack end-to-end tests (Testcontainers)
 
 ---
 
 ## Tech Stack
 
 ### Backend
-
-- Java
-- Spring Boot
-- Spring Security
+- Java 17
+- Spring Boot (Spring Security, Spring Data JPA, Spring Mail)
 - JWT (JSON Web Token)
 - Maven
 
 ### Frontend
-
-- React
-- TypeScript
-- Vite
+- Vanilla HTML / CSS / JavaScript served as static pages by Spring Boot
+  (`index.html`, `share.html`, `guide.html`) — no build step, no SPA framework
+- Lightweight custom i18n engine (`static/i18n.js`) for TR/EN
 
 ### Database
+- PostgreSQL 16
 
-- PostgreSQL
+### Malware scanning
+- Built-in heuristic scanner (always on)
+- Optional [ClamAV](https://www.clamav.net/) daemon over TCP
 
 ### DevOps
-
-- Docker
-- Docker Compose
-- Nginx
+- Docker & Docker Compose
+- Nginx reverse proxy
 - GitHub Actions
-- Oracle Cloud Infrastructure
+- Oracle Cloud Infrastructure (primary) / Render blueprint (`render.yaml`)
 - DuckDNS
 
 ---
@@ -55,25 +70,30 @@ A modern and secure file-sharing platform built with **Spring Boot**, **React**,
 ## Architecture
 
 ```
-                 Browser
-                     │
-                     ▼
-                 Nginx Reverse Proxy
-                  ┌───────────────┐
-                  ▼               ▼
-            React Frontend   Spring Boot API
-                                      │
-                                      ▼
-                                PostgreSQL
+                         Browser / curl
+                              │  (HTTP + JWT Bearer token)
+                              ▼
+                        Nginx Reverse Proxy
+                              │
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │           Spring Boot API                │
+          │  AuthController     /api/auth            │
+          │  FileController     /api/files           │
+          │  FileShareController /api/files/.../shares│
+          │  PublicShareController /api/public/shares │
+          │  Static UI          index/share/guide.html│
+          │  ── Malware scan (built-in + ClamAV)     │
+          │  ── Self-destruct reaper (scheduled)     │
+          │  ── Email outbox (SMTP, retrying)        │
+          └───────┬───────────────────┬───────┬──────┘
+                  │                   │       │
+            ┌─────▼─────┐      ┌──────▼───┐  ┌▼──────────┐
+            │PostgreSQL │      │ Disk:    │  │ ClamAV    │
+            │users,file │      │ uploads/ │  │ (optional)│
+            │shares,...  │      └──────────┘  └───────────┘
+            └───────────┘
 ```
-
----
-
-## Live Demo
-
-Visit the application:
-
-**https://sec-share.duckdns.org**
 
 ---
 
@@ -82,47 +102,79 @@ Visit the application:
 ### Clone the repository
 
 ```bash
-git clone https://github.com/alperenmursalli/Secure-Share.git
-cd Secure-Share
+git clone https://github.com/alperenmursalli/SecShare.git
+cd SecShare
 ```
 
 ### Configure environment variables
 
-Create a `.env` file and configure the required environment variables.
+Create a `.env` file (consumed by `docker-compose`). The most common variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/secshare` | Postgres JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | — | DB credentials |
+| `JWT_SECRET` | *(dev fallback)* | Base64 HMAC secret — **set your own in production** |
+| `JWT_EXPIRATION_MINUTES` | `60` | Access-token lifetime |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | If both set, an ADMIN account is seeded on startup |
+| `STORAGE_PATH` | `uploads` | On-disk directory for stored files |
+| `CLAMAV_ENABLED` | `false` | Run ClamAV in addition to the built-in scanner |
+| `CLAMAV_HOST` / `CLAMAV_PORT` / `CLAMAV_TIMEOUT_MS` | `localhost` / `3310` / `5000` | ClamAV daemon connection |
+| `CLEANUP_ENABLED` / `CLEANUP_INTERVAL_MS` | `true` / `60000` | Self-destruct reaper for expired links |
+| `MAIL_ENABLED` | `false` | Enable outbound audience emails |
+| `MAIL_FROM` | `no-reply@secshare.local` | Envelope/from address |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | — / `587` / — / — | SMTP server (Gmail, SES, SendGrid, …) |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` / `true` | SMTP transport options |
+| `PUBLIC_BASE_URL` | — | Absolute base (e.g. `https://secshare.example.com`) for links in emails |
+| `PORT` | `8080` | HTTP listen port |
 
 Example:
 
 ```env
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/secureshare
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/secshare
 SPRING_DATASOURCE_USERNAME=postgres
 SPRING_DATASOURCE_PASSWORD=your_password
 
 JWT_SECRET=your_base64_secret
+
+# Optional: real virus scanning
+CLAMAV_ENABLED=true
+CLAMAV_HOST=clamav
+
+# Optional: email out audience links
+MAIL_ENABLED=true
+MAIL_HOST=smtp.example.com
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=your_smtp_password
+PUBLIC_BASE_URL=https://secshare.example.com
 ```
 
 ### Run with Docker
 
 ```bash
-docker-compose up -d --build
+docker-compose up -d --build   # start
+docker-compose ps              # view containers
+docker-compose logs -f         # tail logs
+docker-compose down            # stop
 ```
 
-View running containers:
+The app serves both the API and the web UI at `http://localhost:8080`.
 
-```bash
-docker-compose ps
-```
+---
 
-View logs:
+## Usage
 
-```bash
-docker-compose logs -f
-```
+- **Web UI** — open the app, create an account, sign in, upload files, and create shares from
+  the dashboard. A built-in usage guide lives at `/guide.html`.
+- **API** — a machine-readable description of the service and every endpoint is always
+  available at `GET /api/info`.
 
-Stop the application:
+### Limits & rules
 
-```bash
-docker-compose down
-```
+- **Maximum file size:** 50 MB per file
+- **Allowed extensions:** `pdf`, `png`, `jpg`, `jpeg`, `txt`, `doc`, `docx`, `xlsx`, `zip`
+- **Password:** minimum 8 characters at registration
+- **Isolation:** you can only access files your account owns (ADMIN can list all)
 
 ---
 
@@ -156,66 +208,51 @@ To run only the E2E suite:
 
 ---
 
-## Authentication
-
-SecureShare uses JWT authentication for protecting API endpoints.
-
-Example:
-
-```http
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Passwords are securely hashed before storage using Spring Security.
-
----
-
 ## Deployment
 
-Deployment is fully automated through **GitHub Actions**.
+Deployment is automated through **GitHub Actions**. Each push to the `main` branch:
 
-Each push to the `main` branch triggers:
+1. Opens a secure SSH connection to the Oracle Cloud VM
+2. Pulls the latest source (`git reset --hard origin/main`)
+3. Rebuilds the Docker image and restarts containers (`docker-compose up -d --build`)
 
-1. GitHub Actions workflow
-2. Secure SSH connection to the Oracle Cloud VM
-3. Pulling the latest source code
-4. Docker image rebuild
-5. Automatic container restart
+A `render.yaml` blueprint is also included for one-click deployment to [Render](https://render.com).
 
 ---
 
 ## Security
 
-SecureShare follows common security best practices, including:
+SecShare follows common security best practices:
 
-- JWT Authentication
-- Password Hashing
-- Role-Based Access Control (RBAC)
-- Protected REST API Endpoints
-- Environment-based Secret Management
-- Reverse Proxy Configuration
-- Containerized Deployment
-- Input Validation
+- JWT authentication with configurable expiry
+- BCrypt password hashing
+- Role-based access control (USER / ADMIN)
+- Per-user ownership isolation on every file operation
+- Malware/content scanning that rejects infected uploads before they are persisted
+- Burn-after-reading self-destruct and expiring, download-capped public links
+- Environment-based secret management
+- Reverse-proxy + containerized deployment
+- Input validation on all requests
+
+> ⚠️ This project was built for educational and security-testing purposes. Review it before
+> exposing it to the public internet, and don't store genuinely sensitive data on a demo
+> instance.
 
 ---
 
 ## Roadmap
 
-- Email verification
-- Password reset
+- Asynchronous (post-upload) scanning with quarantine state
 - File versioning
-- Expiring download links
 - File encryption at rest
-- Activity logs
-- Storage quota management
-- Multi-file sharing
-- Virus scanning integration
+- Email verification & password reset
+- Per-account storage quotas (hard limits)
 
 ---
 
 ## Project Status
 
-🚧 This project is actively under development, and new features and improvements are continuously being added.
+🚧 Actively developed — new features and improvements are added continuously.
 
 ---
 

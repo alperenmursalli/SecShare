@@ -1,9 +1,11 @@
 # SecShare — Documentation & User Guide
 
-SecShare is a file-sharing application with **JWT-based authentication** that lets
-users register, sign in, and then upload and manage their files. The backend is
-built with Spring Boot (Java 17), the database is PostgreSQL, and files are stored
-on the server's disk.
+SecShare is a security-focused file-sharing application with **JWT-based authentication**
+that lets users register, sign in, upload files, and then share them deliberately — as
+expiring public links, direct grants to other users, or bulk email audiences. Every upload
+is **scanned for malware** before it is stored, and shares can **self-destruct after being
+read**. The backend is built with Spring Boot (Java 17), the database is PostgreSQL, and
+files are stored on the server's disk.
 
 > ⚠️ **Security note:** This application was built for educational / security-testing
 > purposes. Be careful when running it on the public internet — don't put sensitive
@@ -19,19 +21,28 @@ on the server's disk.
 Browser / curl
       │  (HTTP + JWT Bearer token)
       ▼
-┌─────────────────────────────┐
-│  Spring Boot (port 8080)    │
-│  ├─ AuthController  /api/auth│  → register & login, issues token
-│  ├─ FileController  /api/files│ → upload, list, download, delete
-│  ├─ JWT filter               │  → validates the token on every request
-│  └─ Static pages             │  → files.html, test.html
-└──────────┬──────────┬────────┘
-           │          │
-     ┌─────▼────┐  ┌──▼─────────────────┐
-     │PostgreSQL│  │ Disk: /app/uploads │
-     │ users,   │  │ (uploaded files)   │
-     │ files    │  └────────────────────┘
-     └──────────┘
+┌──────────────────────────────────────────────┐
+│  Spring Boot (port 8080)                      │
+│  ├─ AuthController        /api/auth           │  → register & login, issues token
+│  ├─ FileController        /api/files          │  → upload, list, download, delete
+│  ├─ FileShareController   /api/files/.../shares│ → create/list/revoke shares, audit, members
+│  ├─ PublicShareController /api/public/shares   │ → anonymous link metadata & download
+│  ├─ JWT filter                                 │ → validates the token on every request
+│  ├─ Malware scan (built-in + optional ClamAV)  │ → rejects infected uploads before disk
+│  ├─ Self-destruct reaper (scheduled)           │ → purges expired / burned links
+│  ├─ Email outbox (SMTP, retrying)              │ → mails per-recipient audience links
+│  └─ Static UI            index/share/guide.html│
+└──────┬───────────────┬─────────────────┬───────┘
+       │               │                 │
+  ┌────▼─────┐   ┌──────▼──────────┐  ┌──▼──────────┐
+  │PostgreSQL│   │ Disk: /app/     │  │ ClamAV      │
+  │ users,   │   │ uploads/        │  │ (optional,  │
+  │ files,   │   │ (uploaded files)│  │  over TCP)  │
+  │ shares,  │   └─────────────────┘  └─────────────┘
+  │ audiences│
+  │ audit,   │
+  │ outbox   │
+  └──────────┘
 ```
 
 ### Authentication flow (JWT)
@@ -56,6 +67,40 @@ on the server (**stateless**) — identity comes entirely from the token.
   file returns `403 Forbidden`.
 - Deletion is a **soft-delete** (the record is marked `deleted=true`) and the file
   is also removed from disk.
+
+### Malware scanning
+
+Every upload is scanned **synchronously, before the bytes ever touch disk** — an infected
+upload is rejected with `400 Bad Request` and never persisted.
+
+- A **built-in heuristic scanner** always runs (EICAR test string, suspicious patterns,
+  extension/content mismatches).
+- When `CLAMAV_ENABLED=true`, a **ClamAV** daemon is consulted additionally over TCP for
+  real-world coverage. A file is rejected if *either* engine flags it.
+- If ClamAV is enabled but unreachable, scanning **gracefully degrades** to the built-in
+  engine (logged as a warning) so uploads keep working.
+
+### Sharing model
+
+An owner can share one of their files in three ways (`POST /api/files/{id}/shares` with a
+`type`):
+
+- **`LINK`** — a public, tokenized URL anyone can use. Served at the short path
+  `/s/<token>` (which forwards to `share.html`). Optional protections: a **password**, an
+  **expiry** (`expiresInMinutes`), and/or a **maximum download count** (`maxDownloads`).
+- **`USER`** — a direct grant to a specific registered recipient (`recipientEmail`), visible
+  to them under `GET /api/files/shared-with-me`.
+- **`AUDIENCE`** — a grant to a whole email list (`recipientEmails`), reaching many
+  recipients from a single share. Recipients can download via an account-less token or by
+  signing in. When email is enabled, their links can be **mailed out** (`emailLinks`).
+
+**Burn-after-reading:** `USER`/`AUDIENCE` grants accept a `burnMode` — `NONE` (default),
+`FIRST` (destroyed the moment any one recipient opens it), or `ALL` (destroyed once every
+recipient has opened it). A scheduled reaper also purges links that expired unread.
+
+**Download audit:** every download is recorded (who, when, which channel). Owners read the
+log via `GET /api/files/{id}/downloads`, and can opt into download notifications
+(`notifyOnDownload`).
 
 ### Limits
 
@@ -88,8 +133,8 @@ docker compose logs -f app
 It's ready once you see the line "Started SecshareApplication".
 
 Open in a browser:
-- **http://localhost:8080/test.html** — quick test UI
-- **http://localhost:8080/files.html** — file management UI
+- **http://localhost:8080/** — the main app (sign in, upload, and manage shares)
+- **http://localhost:8080/guide.html** — the built-in usage guide
 
 Management commands:
 
@@ -189,6 +234,15 @@ Base URL: `http://localhost:8080`
 | GET | `/api/files/{id}` | ✓ | Download a file (owner only) |
 | DELETE | `/api/files/{id}` | ✓ | Delete a file (owner only). → 204 |
 | GET | `/api/files/all` | ✓ ADMIN | All files (ADMIN role only) |
+| POST | `/api/files/{id}/shares` | ✓ | Create a share: `LINK`, `USER`, or `AUDIENCE` |
+| GET | `/api/files/{id}/shares` | ✓ | List the shares you created for a file |
+| DELETE | `/api/files/shares/{shareId}` | ✓ | Revoke a share |
+| GET | `/api/files/{id}/downloads` | ✓ | Download audit log for a file |
+| GET | `/api/files/shares/{shareId}/members` | ✓ | List members of an audience share |
+| GET | `/api/files/shared-with-me` | ✓ | Files other users shared with you |
+| GET | `/api/public/shares/{token}` | ✗ | Public link metadata (name, size, password required?) |
+| POST | `/api/public/shares/{token}/download` | ✗ | Download via a public link (password in body if set) |
+| GET | `/api/info` | ✗ | Machine-readable usage guide |
 | GET | `/health`, `/healthz` | ✗ | Health check. → `{"status":"ok"}` |
 
 **Auth header:** `Authorization: Bearer <accessToken>`
@@ -231,11 +285,18 @@ Base URL: `http://localhost:8080`
 
 ## 5. Web interface
 
-- **`/test.html`** — a quick test page for getting a token and trying simple requests.
-- **`/files.html`** — a UI to log in and upload/list/download files.
+- **`/`** (`index.html`) — the main app: register/sign in, upload files, see storage usage,
+  and create & manage shares (links, user grants, audiences). The UI is bilingual (TR/EN)
+  with an auto-detected, persistent language toggle.
+- **`/s/<token>`** (`share.html`) — the public landing page for a shared link; anonymous
+  visitors enter a password here if the link requires one, then download.
+- **`/guide.html`** — the built-in usage guide.
 
-To use it from the browser, log in through these pages first; the page stores the
-token for you and attaches it to requests.
+To use it from the browser, sign in on the home page first; the page stores the token for you
+and attaches it to requests.
+
+> Note: `test.html` and `files.html` are earlier, minimal pages kept for quick manual
+> testing; the main app lives at `/`.
 
 ---
 
@@ -253,6 +314,16 @@ Variables read from `.env` (by Docker Compose) and supported by the application:
 | `STORAGE_PATH` | `/app/uploads` | Directory where files are stored |
 | `PORT` | `8080` | HTTP port |
 | `LOG_LEVEL` | `INFO` | Spring Security log level |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | If both set, an ADMIN account is seeded on startup |
+| `CLAMAV_ENABLED` | `false` | Run ClamAV in addition to the built-in scanner |
+| `CLAMAV_HOST` / `CLAMAV_PORT` / `CLAMAV_TIMEOUT_MS` | `localhost` / `3310` / `5000` | ClamAV daemon connection |
+| `CLEANUP_ENABLED` / `CLEANUP_INTERVAL_MS` | `true` / `60000` | Self-destruct reaper for expired links |
+| `MAIL_ENABLED` | `false` | Enable outbound audience emails |
+| `MAIL_FROM` | `no-reply@secshare.local` | From address for sent mail |
+| `MAIL_HOST` / `MAIL_PORT` | — / `587` | SMTP server |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | — | SMTP credentials |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` / `true` | SMTP transport options |
+| `PUBLIC_BASE_URL` | — | Absolute base URL so links in emails are absolute |
 
 > `JWT_SECRET` must be at least 32 bytes (after base64 decoding), otherwise the
 > application won't start. To generate one: `openssl rand -base64 32`
@@ -264,9 +335,9 @@ Variables read from `.env` (by Docker Compose) and supported by the application:
 - **App won't start / DB error:** Check `docker compose logs app` and
   `docker compose logs db`. Wait for the DB to become `Up (healthy)` — the app
   won't start until the DB is ready.
-- **404 at `/`:** Normal, there's no root route. Use `/test.html` or `/files.html`.
 - **Upload returns 400:** Is the extension in the allow-list? (`pdf, png, jpg, jpeg,
-  txt, doc, docx, xlsx, zip`) and the file must not be empty.
+  txt, doc, docx, xlsx, zip`), the file must not be empty, and it must pass the malware
+  scan (an infected file — e.g. the EICAR test string — is rejected with 400).
 - **Request returns 403:** The token may be missing/expired; log in again.
 - **Port conflict:** If 8080 or 5432 is taken, change the port mapping in
   `docker-compose.yml`.
@@ -277,6 +348,9 @@ Variables read from `.env` (by Docker Compose) and supported by the application:
 
 - **Backend:** Spring Boot 3.4.2, Java 17
 - **Security:** Spring Security, JWT (jjwt 0.12.5), BCrypt (strength 12)
-- **Data:** Spring Data JPA + PostgreSQL 16
+- **Data:** Spring Data JPA + PostgreSQL 16 (batched inserts for large audiences)
 - **Storage:** Local file system (`/app/uploads`, persistent via Docker volume)
+- **Malware scanning:** built-in heuristic scanner + optional ClamAV (over TCP)
+- **Email:** Spring Mail (SMTP) behind a durable, retrying outbox
+- **Frontend:** static HTML/CSS/JS served by Spring Boot, with a custom TR/EN i18n engine
 - **Packaging:** Docker (multi-stage build) + Docker Compose
