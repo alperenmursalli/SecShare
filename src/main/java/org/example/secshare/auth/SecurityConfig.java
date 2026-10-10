@@ -31,19 +31,15 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/health", "/healthz").permitAll()
-                    .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                    .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/verify").permitAll()
                     .requestMatchers("/api/info").permitAll()
                     .requestMatchers("/api/public/shares/**").permitAll()
                     .requestMatchers("/", "/index.html", "/guide.html", "/share.html").permitAll()
                     .requestMatchers("/s/**").permitAll()
                     .requestMatchers("/favicon.ico", "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.svg").permitAll()
                     .requestMatchers("/error").permitAll()
-                    .requestMatchers("/files.html").permitAll()
                     .requestMatchers("/api/files/all").hasRole("ADMIN")
-        
-                    .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/test.html").permitAll()              
-                    
+
                     .anyRequest().authenticated()
                 )
 

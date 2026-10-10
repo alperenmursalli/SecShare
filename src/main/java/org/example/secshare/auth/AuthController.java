@@ -31,6 +31,20 @@ public class AuthController {
         return authService.login(request);
     }
 
+    /** Clicked from the verification email; marks the account's email as verified. */
+    @GetMapping("/verify")
+    public ResponseEntity<String> verify(@RequestParam("token") String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok("Your email has been verified. You can now receive files shared with you.");
+    }
+
+    /** Re-sends the verification link to the signed-in (but still unverified) user. */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@AuthenticationPrincipal UserPrincipal user) {
+        authService.resendVerification(user);
+        return ResponseEntity.accepted().build();
+    }
+
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal UserPrincipal user) {
         return authService.me(user);

@@ -28,11 +28,6 @@ public interface FileShareRepository extends JpaRepository<FileShare, UUID> {
     /** Live burn-after-reading links — candidates the reaper inspects for expiry. */
     List<FileShare> findByBurnAfterAccessTrueAndRevokedFalse();
 
-    /** Ids of the audiences a file is actively shared to (used for the access check). */
-    @Query("select fs.audience.id from FileShare fs " +
-            "where fs.file.id = :fileId and fs.type = :type and fs.revoked = false")
-    List<UUID> findActiveAudienceIds(@Param("fileId") UUID fileId, @Param("type") ShareType type);
-
     /** The active share that exposes a given audience (audiences map 1:1 to a share). */
     Optional<FileShare> findFirstByAudienceAndTypeAndRevokedFalse(Audience audience, ShareType type);
 

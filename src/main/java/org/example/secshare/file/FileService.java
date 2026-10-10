@@ -184,14 +184,39 @@ public class FileService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
 
         boolean isOwner = sharedFile.getOwner().getId().equals(principal.userId());
+
+        // Any email-keyed access (a USER grant resolved by address, or audience membership matched
+        // on the JWT's email claim) must be backed by a verified email. Otherwise registering an
+        // unclaimed address would expose files meant for its real owner. Owners always reach their
+        // own uploads regardless of verification state.
+        if (!isOwner) {
+            User user = userRepository.findById(principal.userId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+            if (!user.isEmailVerified()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Verify your email address before accessing files shared with you");
+            }
+        }
+
+        // A grant only confers access while it is active: not revoked, not past its expiry, and
+        // under its download limit (FileShare.isActive()). Checking revoked alone — as this used
+        // to — let a signed-in member keep downloading a share that the public link path already
+        // treats as expired/exhausted.
         boolean isGranted = !isOwner && fileShareRepository
-                .existsByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId());
+                .findByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId())
+                .map(FileShare::isActive)
+                .orElse(false);
 
         boolean isAudienceMember = false;
         if (!isOwner && !isGranted) {
-            List<UUID> audienceIds = fileShareRepository.findActiveAudienceIds(fileId, ShareType.AUDIENCE);
-            isAudienceMember = !audienceIds.isEmpty() && audienceMemberRepository
-                    .existsByAudience_IdInAndEmailIgnoreCase(audienceIds, principal.email());
+            List<UUID> activeAudienceIds = fileShareRepository
+                    .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.AUDIENCE)
+                    .stream()
+                    .filter(FileShare::isActive)
+                    .map(fs -> fs.getAudience().getId())
+                    .toList();
+            isAudienceMember = !activeAudienceIds.isEmpty() && audienceMemberRepository
+                    .existsByAudience_IdInAndEmailIgnoreCase(activeAudienceIds, principal.email());
         }
 
         if (!isOwner && !isGranted && !isAudienceMember) {

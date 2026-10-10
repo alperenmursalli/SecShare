@@ -8,5 +8,6 @@ public record MeResponse(
         UUID id,
         String email,
         List<String> roles,
-        Instant createdAt
+        Instant createdAt,
+        boolean emailVerified
 ) {}

@@ -63,6 +63,7 @@ public class AdminSeeder implements CommandLineRunner {
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
         admin.setRoles("ADMIN,USER");
         admin.setCreatedAt(Instant.now());
+        admin.setEmailVerified(true); // operator-provisioned account; no self-service verification step
 
         userRepository.save(admin);
         log.info("Seeded administrator account '{}'.", email);

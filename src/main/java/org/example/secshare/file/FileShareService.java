@@ -268,11 +268,17 @@ public class FileShareService {
     public List<ShareResponse> listSharedWithMe(UserPrincipal principal) {
         User me = requireUser(principal.userId());
 
+        // Mirror the download gate: an unverified account cannot receive files shared to its
+        // address, so it has no shared-with-me list to show.
+        if (!me.isEmailVerified()) {
+            return List.of();
+        }
+
         List<ShareResponse> result = new ArrayList<>();
         fileShareRepository
                 .findByRecipientAndTypeAndRevokedFalseOrderByCreatedAtDesc(me, ShareType.USER)
                 .stream()
-                .filter(s -> !s.getFile().isDeleted())
+                .filter(s -> s.isActive() && !s.getFile().isDeleted())
                 .map(this::toResponse)
                 .forEach(result::add);
 
