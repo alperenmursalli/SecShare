@@ -59,6 +59,9 @@ public abstract class AbstractE2ETest {
         // Keep the background reaper and outbox quiet during tests.
         registry.add("app.cleanup.enabled", () -> "false");
         registry.add("app.mail.enabled", () -> "false");
+        // The whole suite drives auth from 127.0.0.1; leaving the limiter on would throttle it.
+        // Rate limiting has its own dedicated context in RateLimitE2ETest.
+        registry.add("app.ratelimit.enabled", () -> "false");
     }
 
     @LocalServerPort

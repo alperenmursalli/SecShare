@@ -18,7 +18,14 @@ public final class HttpRequestUtils {
     }
 
     public static String clientIp() {
-        HttpServletRequest request = currentRequest();
+        return clientIp(currentRequest());
+    }
+
+    /**
+     * Resolves the client IP from an explicit request, for callers that run before
+     * {@link RequestContextHolder} is bound (e.g. a Spring Security filter).
+     */
+    public static String clientIp(HttpServletRequest request) {
         if (request == null) {
             return null;
         }

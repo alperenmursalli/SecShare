@@ -1,5 +1,8 @@
 package org.example.secshare.auth;
 
+import org.example.secshare.config.RateLimitFilter;
+import org.example.secshare.config.RateLimiter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,9 +18,15 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final RateLimiter rateLimiter;
+    private final boolean rateLimitEnabled;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                          RateLimiter rateLimiter,
+                          @Value("${app.ratelimit.enabled:true}") boolean rateLimitEnabled) {
         this.jwtFilter = jwtFilter;
+        this.rateLimiter = rateLimiter;
+        this.rateLimitEnabled = rateLimitEnabled;
     }
 
     @Bean
@@ -44,6 +53,7 @@ public class SecurityConfig {
                 )
 
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RateLimitFilter(rateLimiter, rateLimitEnabled), JwtAuthenticationFilter.class)
 
                 .build();
     }

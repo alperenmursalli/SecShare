@@ -26,6 +26,9 @@ self-destruct after they are read.
 - 💥 **Burn-after-reading self-destruct.** Destroy the file on the first recipient's open
   (`FIRST`) or once every recipient has opened it (`ALL`). A background reaper purges expired,
   unread links.
+- 🚦 **Per-IP rate limiting** on the abuse-prone unauthenticated endpoints — credentials
+  (login / register / verify) and public share links — to blunt credential brute-force and
+  share-token enumeration. Exhausted buckets return `429` with a `Retry-After` header.
 - 📜 **Download audit log:** who downloaded what, when, and through which channel
 - ✉️ **Email delivery.** Per-recipient audience links are sent through a durable, retrying
   SMTP outbox, with optional owner notifications on download.
@@ -123,6 +126,9 @@ Create a `.env` file (consumed by `docker-compose`). The most common variables:
 | `CLAMAV_ENABLED` | `false` | Run ClamAV in addition to the built-in scanner |
 | `CLAMAV_HOST` / `CLAMAV_PORT` / `CLAMAV_TIMEOUT_MS` | `localhost` / `3310` / `5000` | ClamAV daemon connection |
 | `CLEANUP_ENABLED` / `CLEANUP_INTERVAL_MS` | `true` / `60000` | Self-destruct reaper for expired links |
+| `RATELIMIT_ENABLED` | `true` | Per-IP rate limiting on unauthenticated endpoints |
+| `RATELIMIT_AUTH_CAPACITY` / `RATELIMIT_AUTH_WINDOW_SECONDS` | `10` / `60` | Credential-endpoint bucket (login/register/verify) |
+| `RATELIMIT_DOWNLOAD_CAPACITY` / `RATELIMIT_DOWNLOAD_WINDOW_SECONDS` | `30` / `60` | Public share-link bucket |
 | `MAIL_ENABLED` | `false` | Enable outbound audience emails |
 | `MAIL_FROM` | `no-reply@secshare.local` | Envelope/from address |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | (none) / `587` / (none) / (none) | SMTP server (Gmail, SES, SendGrid, etc.) |
@@ -232,6 +238,7 @@ SecShare follows common security best practices:
 - Per-user ownership isolation on every file operation
 - Malware and content scanning that rejects infected uploads before they are persisted
 - Burn-after-reading self-destruct and expiring, download-capped public links
+- Per-IP rate limiting on login, registration, email verification, and public share links
 - Environment-based secret management
 - Reverse-proxy and containerized deployment
 - Input validation on all requests
@@ -239,6 +246,12 @@ SecShare follows common security best practices:
 > ⚠️ This project was built for educational and security-testing purposes. Review it before
 > exposing it to the public internet, and don't store genuinely sensitive data on a demo
 > instance.
+
+> ⚠️ **Rate-limiting behind a proxy:** buckets are keyed by the client IP taken from
+> `X-Forwarded-For` (then `X-Real-IP`, then the socket address). Your reverse proxy **must**
+> set that header (`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`), or every
+> request collapses to the proxy's IP and all clients share a single bucket — a global
+> throttle. Limits are in-memory and per instance, so they do not share state across replicas.
 
 ---
 
