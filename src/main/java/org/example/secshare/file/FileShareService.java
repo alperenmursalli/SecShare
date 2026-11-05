@@ -349,36 +349,49 @@ public class FileShareService {
      * Records a member opening an audience share and applies its {@link BurnMode}. Uses the
      * audience's {@code openedCount}/{@code memberCount} counters so ALL-mode never scans the
      * member rows. Returns true when this open destroys the file (caller must purge the bytes).
+     *
+     * <p>Every state change is a single atomic {@code UPDATE} that takes a row-write lock, so this
+     * closes the burn-after-reading race on the audience path (the mirror of the public-link race
+     * fixed in {@link #resolveLinkForDownload}): concurrent opens can never both burn a FIRST-mode
+     * share, no ALL-mode open is lost, and exactly one caller flips the share to revoked.</p>
      */
     private boolean recordAudienceOpenAndMaybeBurn(AudienceMember member, FileShare share) {
-        boolean firstOpenForMember = member.getOpenedAt() == null;
-        member.setDownloadCount(member.getDownloadCount() + 1);
-        if (firstOpenForMember) {
-            member.setOpenedAt(Instant.now());
-        }
-        audienceMemberRepository.save(member);
-
+        // Capture what we need before issuing the bulk updates (associations are LAZY).
+        UUID memberId = member.getId();
+        UUID shareId = share.getId();
         BurnMode mode = share.getBurnMode();
+        UUID audienceId = share.getAudience().getId();
+        int memberCount = share.getAudience().getMemberCount();
+
+        if (mode == BurnMode.FIRST) {
+            // First recipient to open burns the file and is the only one served. Claim the burn up
+            // front: the conditional revoke picks exactly one winner, and any concurrent open that
+            // loses the claim is rejected with 410 — the file is spent, never served a second time.
+            if (fileShareRepository.claimRevoke(shareId) == 0) {
+                throw new ResponseStatusException(HttpStatus.GONE, "This file is no longer available");
+            }
+            audienceMemberRepository.claimFirstOpen(memberId, Instant.now());
+            audienceMemberRepository.incrementDownloadCount(memberId);
+            return true;
+        }
+
+        // NONE / ALL: repeat opens are allowed, so record the open first. claimFirstOpen stamps
+        // openedAt only if it was null (so exactly one concurrent open counts as the member's
+        // first), and the download counter is bumped every time.
+        boolean firstOpenForMember = audienceMemberRepository.claimFirstOpen(memberId, Instant.now()) == 1;
+        audienceMemberRepository.incrementDownloadCount(memberId);
+
         if (mode == BurnMode.NONE) {
             return false;
         }
-        if (mode == BurnMode.FIRST) {
-            share.setRevoked(true);
-            fileShareRepository.save(share);
-            return true;
-        }
-        // ALL: burn once every distinct member has opened at least once.
-        Audience audience = share.getAudience();
+        // ALL: burn once every distinct member has opened at least once. Only a member's first open
+        // advances the counter; incrementOpenedCount serializes concurrent first-opens on the row
+        // lock, and currentOpenedCount re-reads the live value this transaction just wrote.
         if (firstOpenForMember) {
-            audience.setOpenedCount(audience.getOpenedCount() + 1);
-            audienceRepository.save(audience);
+            audienceRepository.incrementOpenedCount(audienceId);
         }
-        if (audience.getMemberCount() > 0 && audience.getOpenedCount() >= audience.getMemberCount()) {
-            share.setRevoked(true);
-            fileShareRepository.save(share);
-            return true;
-        }
-        return false;
+        int openedCount = audienceRepository.currentOpenedCount(audienceId);
+        return memberCount > 0 && openedCount >= memberCount && fileShareRepository.claimRevoke(shareId) == 1;
     }
 
     private java.util.Optional<FileShare> activeAudienceShare(Audience audience) {
@@ -386,16 +399,16 @@ public class FileShareService {
     }
 
     /**
-     * Validates a share link (revocation, expiry, download limit, password) and, on
-     * success, increments the download counter and returns the file to serve.
+     * Validates a share link (revocation, expiry, download limit, password) and, on success,
+     * atomically claims one download and returns the file to serve.
      *
-     * <p>For a burn link, the file's bytes are destroyed once every allowed download has
-     * been spent (or after the first download when no limit is set). On that final download
-     * the share is revoked in the same transaction so the token can never resolve again; the
-     * caller is then responsible for destroying the file's bytes (see
-     * {@link LinkDownload#burn()}). Note: revocation here is best-effort
-     * against races — two simultaneous requests could both pass the {@code revokedFalse}
-     * lookup before either commits. A pessimistic lock would close that window entirely.</p>
+     * <p>For a burn link, the file's bytes are destroyed once every allowed download has been
+     * spent (or after the first download when no limit is set). The claim is made by a single
+     * conditional {@code UPDATE} ({@link FileShareRepository#claimDownload}) that takes a
+     * row-write lock, so two simultaneous requests can never both be served: they serialize on
+     * the lock, exactly one wins the terminal download and flips the share to revoked, and the
+     * loser's claim affects zero rows and is rejected with {@code 410}. The winning caller is
+     * then responsible for destroying the file's bytes (see {@link LinkDownload#burn()}).</p>
      */
     @Transactional
     public LinkDownload resolveLinkForDownload(String token, String password) {
@@ -418,18 +431,23 @@ public class FileShareService {
             }
         }
 
-        share.setDownloadCount(share.getDownloadCount() + 1);
-
-        // Burn is coupled to the download limit: the file is destroyed only once every
-        // allowed download has been spent. With no limit set, a single download exhausts it.
-        boolean burnNow = share.isBurnAfterAccess()
-                && (share.getMaxDownloads() == null || share.isDownloadLimitReached());
-        if (burnNow) {
-            share.setRevoked(true); // spent: the link can never resolve again
+        // Atomically claim this download. Concurrent requests serialize on the row-write lock
+        // inside claimDownload, so a burn link can never be served twice: exactly one caller
+        // wins the terminal download, every other concurrent claim affects zero rows.
+        int claimed = fileShareRepository.claimDownload(share.getId(), share.isBurnAfterAccess());
+        if (claimed == 0) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This link's download limit has been reached");
         }
-        fileShareRepository.save(share);
-        downloadAuditService.record(share.getFile(), share, DownloadSource.LINK, null, burnNow);
-        return new LinkDownload(share.getFile(), burnNow);
+
+        // Re-read the row the UPDATE just mutated (claimDownload cleared the persistence context).
+        // Only the terminal claim flips the share to revoked, so burnNow is true for exactly one
+        // caller — the one that must destroy the bytes.
+        FileShare claimedShare = fileShareRepository.findById(share.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.GONE, "This file is no longer available"));
+        boolean burnNow = claimedShare.isBurnAfterAccess() && claimedShare.isRevoked();
+
+        downloadAuditService.record(claimedShare.getFile(), claimedShare, DownloadSource.LINK, null, burnNow);
+        return new LinkDownload(claimedShare.getFile(), burnNow);
     }
 
     // ---------------------------------------------------------------------

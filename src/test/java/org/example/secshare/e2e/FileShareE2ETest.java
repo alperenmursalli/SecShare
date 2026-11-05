@@ -12,7 +12,13 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,6 +61,55 @@ class FileShareE2ETest extends AbstractE2ETest {
         String shareUrl = (String) resp.getBody().get("url");
         assertThat(shareUrl).startsWith("/s/");
         return shareUrl.substring("/s/".length());
+    }
+
+    /** Creates an AUDIENCE share with the given burn mode and returns a member's public token. */
+    @SuppressWarnings("unchecked")
+    private String createAudienceShareAndMemberToken(String ownerToken, String fileId,
+                                                     String memberEmail, String burnMode) {
+        String body = "{\"type\":\"AUDIENCE\",\"recipientEmails\":[\"" + memberEmail
+                + "\"],\"burnMode\":\"" + burnMode + "\"}";
+        ResponseEntity<Map> created = rest.postForEntity(
+                url("/api/files/" + fileId + "/shares"), jsonEntity(body, ownerToken), Map.class);
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(created.getBody()).isNotNull();
+        String shareId = (String) created.getBody().get("id");
+
+        ResponseEntity<List> members = rest.exchange(
+                url("/api/files/shares/" + shareId + "/members"),
+                HttpMethod.GET, new HttpEntity<>(bearer(ownerToken)), List.class);
+        assertThat(members.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(members.getBody()).isNotEmpty();
+        Map<String, Object> member = (Map<String, Object>) members.getBody().get(0);
+        String memberUrl = (String) member.get("url");
+        assertThat(memberUrl).startsWith("/s/");
+        return memberUrl.substring("/s/".length());
+    }
+
+    /** Fires {@code n} downloads of {@code token} simultaneously and returns how many got 2xx. */
+    private int concurrentDownloadSuccesses(String token, int n) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(n);
+        CountDownLatch ready = new CountDownLatch(n);
+        CountDownLatch go = new CountDownLatch(1);
+        List<Future<Integer>> futures = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            futures.add(pool.submit(() -> {
+                ready.countDown();
+                go.await(); // all threads block here, then fire together
+                ResponseEntity<byte[]> resp = rest.exchange(
+                        url("/api/public/shares/" + token + "/download"),
+                        HttpMethod.POST, new HttpEntity<>(null, jsonHeaders()), byte[].class);
+                return resp.getStatusCode().is2xxSuccessful() ? 1 : 0;
+            }));
+        }
+        ready.await();
+        go.countDown();
+        int successes = 0;
+        for (Future<Integer> f : futures) {
+            successes += f.get();
+        }
+        pool.shutdown();
+        return successes;
     }
 
     @Test
@@ -128,6 +183,31 @@ class FileShareE2ETest extends AbstractE2ETest {
                 url("/api/public/shares/" + shareToken + "/download"),
                 HttpMethod.POST, new HttpEntity<>(null, jsonHeaders()), String.class);
         assertThat(second.getStatusCode().is2xxSuccessful()).isFalse();
+    }
+
+    @Test
+    void burn_link_served_at_most_once_under_concurrent_downloads() throws Exception {
+        // Regression for the burn-after-reading race: a one-download link must be served exactly
+        // once even when many requests hit it simultaneously (atomic claimDownload).
+        String token = registerAndLogin(uniqueEmail(), "supersecret1");
+        String fileId = uploadFile(token, "race.txt", "only once".getBytes(StandardCharsets.UTF_8));
+        String shareToken = createLinkShare(token, fileId, "{\"type\":\"LINK\",\"maxDownloads\":1}");
+
+        int successes = concurrentDownloadSuccesses(shareToken, 8);
+        assertThat(successes).isEqualTo(1);
+    }
+
+    @Test
+    void first_mode_audience_share_served_at_most_once_under_concurrent_opens() throws Exception {
+        // Regression for MISS-01: the same race on the audience path. A FIRST-mode group share must
+        // be served to exactly one of many simultaneous opens; the losers get 410, not the file.
+        String owner = registerAndLogin(uniqueEmail(), "supersecret1");
+        String fileId = uploadFile(owner, "group-once.txt",
+                "burn on first open".getBytes(StandardCharsets.UTF_8));
+        String memberToken = createAudienceShareAndMemberToken(owner, fileId, uniqueEmail(), "FIRST");
+
+        int successes = concurrentDownloadSuccesses(memberToken, 8);
+        assertThat(successes).isEqualTo(1);
     }
 
     @Test
