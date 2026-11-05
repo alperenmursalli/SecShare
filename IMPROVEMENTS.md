@@ -49,13 +49,13 @@ burn-after-reading garantisi ihlal olur. Kod bu race'i yorumda zaten itiraf ediy
 - read+purge aynı transaction kapsamına alınmalı.
 - Regresyon testi: iki eşzamanlı indirme → tam olarak biri 2xx, diğeri 410.
 
-**Yapıldı.** Link yolu `FileShareRepository.claimDownload` (atomik koşullu UPDATE +
-`affectedRows==1`), audience yolu `claimRevoke` / `claimFirstOpen` /
-`incrementOpenedCount` + canlı `currentOpenedCount` ile kapatıldı. FIRST modunda
-claim'i kaybeden eşzamanlı açılış artık `410`. Regresyon:
-`FileShareE2ETest` içinde iki concurrency testi. Ayrıntı: `security/week-01/`.
+**Yapıldı.** Üç çağrı yolu da kapatıldı: link (`claimDownload`), audience
+(`claimRevoke`/`claimFirstOpen`/`incrementOpenedCount` + canlı `currentOpenedCount`),
+authenticated USER-grant (`lockActiveShare`, pessimistic lock — MISS-02). FIRST modunda
+claim'i kaybeden eşzamanlı açılış artık `410`. Regresyon: `FileShareE2ETest` içinde 3
+concurrency testi. Ayrıntı: `security/w01/`, transcript `ai/w01/`.
 
-**Durum.** ✅ Tamamlandı (ALL-modu purge-vs-serve dar penceresi Week 02'ye — MISS-02)
+**Durum.** ✅ Tamamlandı (ALL-modu purge-vs-serve + USER-ALL burn-timing edge'leri Week 02'ye)
 
 ---
 

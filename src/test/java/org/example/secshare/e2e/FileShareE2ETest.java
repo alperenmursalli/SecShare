@@ -1,6 +1,9 @@
 package org.example.secshare.e2e;
 
+import org.example.secshare.user.User;
+import org.example.secshare.user.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +31,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * exercises the security-defining behaviours: password gating and burn-after-reading.
  */
 class FileShareE2ETest extends AbstractE2ETest {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    /** Verifies an account's email via its pending token (mail is off in tests). */
+    private void verifyEmail(String email) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new IllegalStateException("no user for " + email));
+        ResponseEntity<String> verify = rest.getForEntity(
+                url("/api/auth/verify?token=" + user.getVerificationToken()), String.class);
+        assertThat(verify.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
 
     /** Uploads {@code content} as {@code filename} and returns the stored file id. */
     private String uploadFile(String token, String filename, byte[] content) {
@@ -99,6 +114,32 @@ class FileShareE2ETest extends AbstractE2ETest {
                 ResponseEntity<byte[]> resp = rest.exchange(
                         url("/api/public/shares/" + token + "/download"),
                         HttpMethod.POST, new HttpEntity<>(null, jsonHeaders()), byte[].class);
+                return resp.getStatusCode().is2xxSuccessful() ? 1 : 0;
+            }));
+        }
+        ready.await();
+        go.countDown();
+        int successes = 0;
+        for (Future<Integer> f : futures) {
+            successes += f.get();
+        }
+        pool.shutdown();
+        return successes;
+    }
+
+    /** Fires {@code n} authenticated downloads of {@code fileId} simultaneously; returns 2xx count. */
+    private int concurrentAuthDownloadSuccesses(String fileId, String bearerToken, int n) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(n);
+        CountDownLatch ready = new CountDownLatch(n);
+        CountDownLatch go = new CountDownLatch(1);
+        List<Future<Integer>> futures = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            futures.add(pool.submit(() -> {
+                ready.countDown();
+                go.await();
+                ResponseEntity<byte[]> resp = rest.exchange(
+                        url("/api/files/" + fileId), HttpMethod.GET,
+                        new HttpEntity<>(bearer(bearerToken)), byte[].class);
                 return resp.getStatusCode().is2xxSuccessful() ? 1 : 0;
             }));
         }
@@ -207,6 +248,28 @@ class FileShareE2ETest extends AbstractE2ETest {
         String memberToken = createAudienceShareAndMemberToken(owner, fileId, uniqueEmail(), "FIRST");
 
         int successes = concurrentDownloadSuccesses(memberToken, 8);
+        assertThat(successes).isEqualTo(1);
+    }
+
+    @Test
+    void first_mode_user_grant_served_at_most_once_under_concurrent_authenticated_downloads() throws Exception {
+        // Regression for MISS-02: the burn race also existed on the authenticated USER-grant path
+        // (recordAuthenticatedAccessAndMaybeBurn). A FIRST-mode grant must be served to exactly one
+        // of many simultaneous authenticated downloads; the losers get 410, not the file.
+        String recipientEmail = uniqueEmail();
+        String recipientToken = registerAndLogin(recipientEmail, "supersecret1");
+        verifyEmail(recipientEmail); // non-owner access requires a verified email
+
+        String ownerToken = registerAndLogin(uniqueEmail(), "supersecret1");
+        String fileId = uploadFile(ownerToken, "user-once.txt",
+                "burn on first recipient open".getBytes(StandardCharsets.UTF_8));
+        ResponseEntity<Map> share = rest.postForEntity(
+                url("/api/files/" + fileId + "/shares"),
+                jsonEntity("{\"type\":\"USER\",\"recipientEmail\":\"" + recipientEmail
+                        + "\",\"burnMode\":\"FIRST\"}", ownerToken), Map.class);
+        assertThat(share.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        int successes = concurrentAuthDownloadSuccesses(fileId, recipientToken, 8);
         assertThat(successes).isEqualTo(1);
     }
 

@@ -1,7 +1,9 @@
 package org.example.secshare.file;
 
+import jakarta.persistence.LockModeType;
 import org.example.secshare.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -43,6 +45,16 @@ public interface FileShareRepository extends JpaRepository<FileShare, UUID> {
     @Modifying
     @Query("update FileShare fs set fs.revoked = true where fs.id = :id and fs.revoked = false")
     int claimRevoke(@Param("id") UUID id);
+
+    /**
+     * Loads an active (non-revoked) share and holds a row-write lock on it for the rest of the
+     * transaction, so concurrent authenticated downloads of the same grant serialize — the
+     * authenticated-path counterpart of {@link #claimDownload} for USER grants. Returns empty
+     * when a concurrent open already revoked the grant (that caller must be rejected).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select fs from FileShare fs where fs.id = :id and fs.revoked = false")
+    Optional<FileShare> lockActiveShare(@Param("id") UUID id);
 
     List<FileShare> findByFileAndRevokedFalseOrderByCreatedAtDesc(SharedFile file);
 

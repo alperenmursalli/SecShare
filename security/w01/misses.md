@@ -1,6 +1,45 @@
-# Week 01 — MISS kayıtları
+# w01 — MISS kayıtları
 
 AI'ın kaçırdığı / kapatmadığı gerçek açıklar. Format: `../SECURITY_CYCLE.md`.
+Kaynak transcript: `../../ai/w01/transcript.md`.
+
+- **MISS-01** — burn fix'in audience yolunu atlaması (dünkü oturumun kaçırdığı).
+- **MISS-02** — 5-prompt AI geçişinin kaçırdığı: USER-grant authenticated burn yolu.
+
+---
+
+### MISS-02 — Burn race'i authenticated USER-grant yolunda hâlâ açık (5-prompt AI bunu kaçırdı)
+
+- **Sınıf/CWE:** CWE-362 Race Condition / CWE-367 TOCTOU (burn-after-reading ihlali)
+- **Nerede:** `FileShareService.recordAuthenticatedAccessAndMaybeBurn` → USER-grant dalı
+  (`src/main/java/org/example/secshare/file/FileShareService.java:475-488`) +
+  `FileController.download` (`:734-740`)
+- **AI neden kaçırdı:** Prompt 4 (diff review) *yalnızca diff'teki değişen satırlara* baktı
+  ve değişmeyen kodu açıkça kapsam dışı bıraktı ("code not touched by the diff was out of
+  scope"). Burn fix'i `resolveLinkForDownload` + audience'ı atomik yaptı ama **aynı bug
+  pattern'inin üçüncü kopyası** diff'e hiç girmeyen `recordAuthenticatedAccessAndMaybeBurn`
+  içinde duruyordu. Ders: *AI diff'i inceler, kök-neden'in diff dışındaki kardeş
+  kopyalarını görmez.* Prompt 2 (control smoke test) de burn'ü "link path" diye kontrol
+  edip authenticated USER path'i atladı.
+- **Kanıt / reprodüksiyon:** Bir dosyayı `type=USER`, `burnMode=FIRST` ile bir kullanıcıya
+  paylaş. Alıcı aynı anda iki kez `GET /api/files/{id}` çağırsın:
+  1. İki istek de `getAccessibleFileOrThrow`'u geçer (dosya henüz silinmedi).
+  2. İkisi de `recordAuthenticatedAccessAndMaybeBurn` → USER dalı: `downloadCount++` +
+     `save` (kilitsiz), `switch FIRST -> true`. `share.revoked` **hiç set edilmiyor**.
+  3. İkisi de `burn=true` → controller ikisinde de `readAllBytes` + `purge` + serve.
+  → Dosya **iki kez** servis edilir; burn-after-reading ihlali. (ALL modu da
+  `downloadCount > 0` okumasıyla lost-update'e açık.)
+- **Uygulanan fix:** `FileShareRepository.lockActiveShare` (`@Lock(PESSIMISTIC_WRITE)` +
+  `revoked=false` guard). USER dalı artık grant satırını kilitliyor; FIRST'te terminal açılış
+  `revoked=true` yapıp burn eder, eşzamanlı kaybeden `lockActiveShare`'den boş döner ve `410`
+  alır — dosya ikinci kez servis edilmez. ALL'da sayaç kendi satır kilidi altında artıyor
+  (lost-update yok). (`FileShareService.recordAuthenticatedAccessAndMaybeBurn:475-500`)
+- **Regresyon testi:** `FileShareE2ETest.first_mode_user_grant_served_at_most_once_under_concurrent_authenticated_downloads`
+  (8 eşzamanlı authenticated indirme → tam 1 adet 2xx).
+- **Durum:** ✅ Fix edildi (16/16 test yeşil).
+- **Artık (Week 02):** ALL modunda iki farklı alıcının eşzamanlı *son* açılışı, her ikisi de
+  diğerini "açmamış" görürse burn ertelenebilir (çift-servis değil; dosya imha edilmeden
+  kalır). Audience ALL purge-vs-serve edge'i ile birlikte Week 02'ye.
 
 ---
 

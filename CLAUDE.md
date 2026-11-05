@@ -7,8 +7,8 @@ güvenlik döngüsüyle sertleştiriliyor. Süreç: `security/SECURITY_CYCLE.md`
 
 "Saldırgan gözüyle test et" denildiğinde:
 
-1. **Ham çıktıyı bozma.** Bulgularımı transcript olarak `security/week-NN/transcript.md`
-   altında, olduğu gibi üret. Sonradan "temizlenmiş" versiyon istemeyi kullanıcıya bırak.
+1. **Ham çıktıyı bozma.** Bulgularımı transcript olarak `ai/wNN/transcript.md` altında,
+   olduğu gibi üret. Sonradan "temizlenmiş" versiyon istemeyi kullanıcıya bırak.
 2. **Her bulgu şu formatta:** başlık · CWE sınıfı · severity · dosya:satır / endpoint ·
    reprodüksiyon adımları · önerilen fix · regresyon testi fikri.
 3. **Emin olmadığımda "emin değilim" de.** Spekülatif bulguyu gerçek gibi sunma;

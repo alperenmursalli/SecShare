@@ -473,17 +473,32 @@ public class FileShareService {
                 .findByFile_IdAndRecipient_IdAndRevokedFalse(fileId, principal.userId())
                 .orElse(null);
         if (userShare != null && userShare.getType() == ShareType.USER) {
-            userShare.setDownloadCount(userShare.getDownloadCount() + 1);
-            fileShareRepository.save(userShare);
-            boolean userBurn = switch (userShare.getBurnMode()) {
-                case FIRST -> true;
+            // Lock the grant row for the rest of the transaction so concurrent authenticated
+            // downloads of the same grant serialize — this is the authenticated-path mirror of the
+            // atomic claim on the public-link path, closing the same burn-after-reading race.
+            FileShare locked = fileShareRepository.lockActiveShare(userShare.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.GONE,
+                            "This file is no longer available"));
+            locked.setDownloadCount(locked.getDownloadCount() + 1);
+            boolean userBurn = switch (locked.getBurnMode()) {
+                // FIRST: first recipient open burns it. Revoke in the same locked transaction so a
+                // concurrent open finds the grant revoked (lockActiveShare returns empty → 410) and
+                // is never served the file a second time.
+                case FIRST -> {
+                    locked.setRevoked(true);
+                    yield true;
+                }
+                // ALL: burn once every active USER recipient has opened at least once. The count for
+                // this grant is now bumped under its row lock, so the same-grant increment is never
+                // lost. (Cross-recipient burn timing is tracked as a Week 02 ALL-mode edge.)
                 case ALL -> fileShareRepository
                         .findByFile_IdAndTypeAndRevokedFalse(fileId, ShareType.USER)
                         .stream()
-                        .allMatch(g -> g.getDownloadCount() > 0);
+                        .allMatch(g -> g.getId().equals(locked.getId()) || g.getDownloadCount() > 0);
                 case NONE -> false;
             };
-            downloadAuditService.record(userShare.getFile(), userShare, DownloadSource.USER, principal.email(), userBurn);
+            fileShareRepository.save(locked);
+            downloadAuditService.record(locked.getFile(), locked, DownloadSource.USER, principal.email(), userBurn);
             burn = userBurn;
         }
 

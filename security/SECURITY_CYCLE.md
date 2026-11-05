@@ -11,30 +11,51 @@ Asıl teslim edilen şey AI'ın çıktısı değil, **o çıktı hakkındaki yar
 
 ## Haftalık döngü (6 adım)
 
-1. **Build** — Çalışan sürümü güncelle, `./mvnw test` yeşil olmalı.
-2. **AI güvenlik testi** — Claude'a "bunu saldırgan gözüyle test et" de.
-   Ham çıktı (transcript) olduğu gibi saklanır, **düzenlenmez.**
-3. **Triage** — Her bulguyu sınıflandır: `GERÇEK / YANLIŞ-ALARM / TEKRAR / WONTFIX`.
-4. **Fix** — Gerçek bulguları düzelt + her biri için regresyon testi yaz.
+1. **Build** — Küçük ve **bitmiş** bir şey yap (*small & finished > large & broken*).
+   `./mvnw test` yeşil olmalı. Hafta boyunca **parça parça commit** et (tek "dump" commit
+   not kaybettirir).
+2. **Freeze** — Commit'le ve `wNN` tag'i at (ör. `w01`). AI testi tam bu tag'e karşı koşar.
+3. **5 standart AI promptu** — Tag'e karşı sırayla çalıştır, ham çıktıyı `ai/wNN/`'a yaz
+   (**düzenlenmez**, AI'ın yanıldığı yerler dahil):
+   1. **Attack surface** — giriş noktaları, güven sınırları, varlıklar
+   2. **Control smoke test** — her güvenlik kontrolü gerçekten çalışıyor mu
+   3. **Regression** — önceki fix'ler hâlâ duruyor mu, yeni değişiklik bir şey açtı mı
+   4. **Diff review** — bu tag'in getirdiği diff'te yeni hata var mı
+   5. **Abuse cases** — özelliğin kötüye kullanımı
+4. **Triage** — Her bulguyu sınıflandır: `GERÇEK / YANLIŞ-ALARM / TEKRAR / WONTFIX`.
 5. **MISS avı** — AI'ın **kaçırdığı en az bir gerçek açığı** kendin bul (`MISS-nn`).
-6. **Tag + Submit** — `git tag week-NN` at, teslim paketini oluştur.
+6. **Fix + re-run + tag + submit** — Gerçek bulguları (ve MISS'i) düzelt + regresyon testi,
+   testleri tekrar koş, tag'i güncel koda al, teslim et.
 
 ---
 
 ## Klasör yapısı
 
-Her hafta için:
-
 ```
+ai/
+  w01/
+    transcript.md      # 5 promptun HAM AI çıktısı — hiç düzenlenmez (yönerge: ai/)
+  w02/ ...
 security/
-  week-01/
-    transcript.md      # AI'ın HAM çıktısı — hiç düzenlenmez
-    triage.md          # bulgu sınıflandırma tablosu + gerekçeler
+  SECURITY_CYCLE.md    # bu belge
+  SECURITY_WRITEUP.md  # kümülatif güvenlik yazısı
+  w01/
+    README.md          # hafta özeti + teslim checklist
+    triage.md          # bulgu sınıflandırma + gerekçeler
     misses.md          # MISS-nn kayıtları (AI'ın kaçırdıkları)
-    critique.md        # AI çıktısı hakkındaki kendi yargımız
-  week-02/
-    ...
+    critique.md        # AI çıktısı hakkındaki yargımız (notun en büyük farkı)
+  w02/ ...
 ```
+
+---
+
+## Haftalık teslim (yönerge)
+
+- **Private repo** + instructor collaborator (public olmaz, tek-dump commit not kaybettirir).
+- `wNN` git tag'i.
+- `ai/wNN/` içinde **verbatim** AI transcript (yanıldığı yerler dahil).
+- **1 sayfalık PDF critique** → EgeDers, **Çarşamba 23:59**.
+- Demo: hoca bir dosya seçip açıklatır — *"bunu AI yazdı"* geçersiz cevaptır; kodu anla.
 
 ---
 
