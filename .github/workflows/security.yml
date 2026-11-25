@@ -1,0 +1,28 @@
+name: security
+
+# Runs the automated security / exploit tests on every push and PR. The HW1 injection
+# exploit test (Hw1SqlInjectionE2ETest) must be green at the hw1-fixed tag.
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'hw*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  security-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      # Testcontainers needs a Docker daemon; ubuntu-latest ships one pre-installed.
+      - name: Run security tests
+        run: ./mvnw -B test -Dtest=Hw1SqlInjectionE2ETest

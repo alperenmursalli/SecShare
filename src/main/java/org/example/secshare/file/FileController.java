@@ -37,9 +37,13 @@ public class FileController {
 
     @GetMapping
     public List<FileInfoResponse> listMyFiles(
+            @RequestParam(value = "q", required = false) String q,
             @AuthenticationPrincipal UserPrincipal user
     ) {
-        return fileService.listMyFiles(user);
+        if (q == null || q.isBlank()) {
+            return fileService.listMyFiles(user);
+        }
+        return fileService.searchMyFiles(user, q);
     }
 
     @GetMapping("/{id}")
