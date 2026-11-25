@@ -7,8 +7,6 @@ import org.example.secshare.file.scan.ScanResult;
 import org.example.secshare.file.scan.ScanStatus;
 import org.example.secshare.user.User;
 import org.example.secshare.user.UserRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -32,6 +30,7 @@ import java.util.UUID;
 public class FileService {
 
     private static final long MAX_FILE_SIZE_BYTES = 50L * 1024 * 1024; // 50 MB
+    private static final int MAX_SEARCH_TERM_LENGTH = 100;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             "pdf", "png", "jpg", "jpeg", "txt", "doc", "docx", "xlsx", "zip"
     );
@@ -42,9 +41,6 @@ public class FileService {
     private final UserRepository userRepository;
     private final FileScanService fileScanService;
     private final Path baseStoragePath;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public FileService(
             SharedFileRepository sharedFileRepository,
@@ -148,48 +144,37 @@ public class FileService {
     /**
      * Filename search across the signed-in user's own files, backing {@code GET /api/files?q=}.
      *
-     * <p>The search term is concatenated straight into a native SQL string. A crafted {@code q}
-     * can therefore break out of the string literal and rewrite the query (SQL injection).
+     * <p>Defense in depth against SQL injection (CWE-89):
+     * <ol>
+     *   <li><b>Parameterised query</b> — the term is bound through JPA
+     *       ({@link SharedFileRepository#searchOwnedByFilename}), never concatenated into SQL, so
+     *       it can never be parsed as query structure.</li>
+     *   <li><b>Owner scoping in the query itself</b> — results are constrained to the caller's
+     *       rows by the {@code :owner} bind, so no payload can reach another tenant's data.</li>
+     *   <li><b>Input validation</b> — overly long terms are rejected.</li>
+     *   <li><b>LIKE wildcard escaping</b> — {@code %}, {@code _} and {@code \} are escaped so a
+     *       crafted term cannot broaden the pattern match.</li>
+     * </ol>
      */
     public List<FileInfoResponse> searchMyFiles(UserPrincipal principal, String q) {
         User owner = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
-        String sql = "SELECT id, original_filename, size_bytes, content_type, created_at, scan_status "
-                + "FROM files "
-                + "WHERE owner_id = '" + owner.getId() + "' "
-                + "AND deleted = false "
-                + "AND original_filename ILIKE '%" + q + "%' "
-                + "ORDER BY created_at DESC";
-
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
-
-        return rows.stream().map(this::toResponse).toList();
-    }
-
-    /** Maps a raw native-query row (see {@link #searchMyFiles}) to the API response shape. */
-    private FileInfoResponse toResponse(Object[] row) {
-        UUID id = row[0] instanceof UUID u ? u : UUID.fromString(String.valueOf(row[0]));
-        String name = row[1] != null ? String.valueOf(row[1]) : null;
-        long size = row[2] instanceof Number n ? n.longValue() : 0L;
-        String contentType = row[3] != null ? String.valueOf(row[3]) : null;
-        Instant createdAt = toInstant(row[4]);
-        String scanStatus = row[5] != null ? String.valueOf(row[5]) : null;
-        return new FileInfoResponse(id, name, size, contentType, createdAt, scanStatus);
-    }
-
-    private Instant toInstant(Object value) {
-        if (value instanceof Instant instant) {
-            return instant;
+        String term = q.strip();
+        if (term.length() > MAX_SEARCH_TERM_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search term is too long");
         }
-        if (value instanceof java.time.OffsetDateTime odt) {
-            return odt.toInstant();
-        }
-        if (value instanceof java.sql.Timestamp ts) {
-            return ts.toInstant();
-        }
-        return null;
+
+        // Escape LIKE metacharacters (matched with ESCAPE '\' in the query) so they are literal.
+        String escaped = term
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+
+        return sharedFileRepository.searchOwnedByFilename(owner, escaped)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public Resource loadFile(UUID fileId, UserPrincipal principal) {
